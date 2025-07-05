@@ -1,0 +1,24 @@
+{
+    "project_name": "My Startup",
+    "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '-').replace('_', '-') }}",
+    "project_short_description": "A brief description of your startup",
+    "author_name": "Your Name",
+    "author_email": "your.email@example.com",
+    "version": "0.1.0",
+    "use_pytest": "y",
+    "use_black": "y",
+    "use_mypy": "y",
+    "create_author_file": "y",
+    "open_source_license": ["MIT", "BSD-3-Clause", "No license file"],
+    "_copy_without_render": [
+        "*.pyc",
+        "__pycache__",
+        ".git",
+        "node_modules",
+        ".DS_Store",
+        "htmlcov",
+        ".pytest_cache",
+        "*.egg-info",
+        ".coverage"
+    ]
+}

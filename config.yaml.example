@@ -1,0 +1,237 @@
+# Startup Factory AI Orchestrator Configuration
+# Copy this file to config.yaml and fill in your API keys
+
+# General Settings
+version: "1.0"
+environment: "development"  # development, staging, production
+
+# API Keys (Required)
+api_keys:
+  # OpenAI API (for ChatGPT, GPT-4)
+  openai_api_key: "your-openai-api-key-here"
+  
+  # Anthropic API (for Claude)
+  anthropic_api_key: "your-anthropic-api-key-here"
+  
+  # Perplexity API (for research)
+  perplexity_api_key: "your-perplexity-api-key-here"
+  
+  # Google API (for Gemini)
+  google_api_key: "your-google-api-key-here"
+
+# AI Agent Configuration
+ai_agents:
+  research:
+    provider: "perplexity"
+    model: "llama-3.1-sonar-large-128k-online"
+    max_tokens: 20000
+    timeout_minutes: 15
+    
+  planning:
+    provider: "anthropic"
+    model: "claude-3-5-sonnet-20241022"
+    max_tokens: 20000
+    timeout_minutes: 15
+    
+  architecture:
+    provider: "anthropic"
+    model: "claude-3-5-sonnet-20241022"
+    max_tokens: 20000
+    timeout_minutes: 15
+    
+  backend:
+    provider: "google"
+    model: "gemini-1.5-pro"
+    max_tokens: 20000
+    timeout_minutes: 15
+    
+  frontend:
+    provider: "openai"
+    model: "gpt-4o"
+    max_tokens: 20000
+    timeout_minutes: 15
+    
+  ios:
+    provider: "google"
+    model: "gemini-1.5-pro"
+    max_tokens: 20000
+    timeout_minutes: 15
+    
+  testing:
+    provider: "openai"
+    model: "gpt-4o"
+    max_tokens: 20000
+    timeout_minutes: 15
+
+# Budget and Cost Management
+budget:
+  # Budget per startup in USD
+  per_startup_limit: 15000
+  
+  # Budget per task in USD
+  per_task_limit: 100
+  
+  # Alert thresholds
+  alerts:
+    startup_budget_80_percent: true
+    startup_budget_90_percent: true
+    task_budget_50_percent: true
+    
+  # Auto-shutdown when budget exceeded
+  auto_shutdown_on_budget_exceeded: true
+
+# Human Gates Configuration
+human_gates:
+  gate_0_niche_validation:
+    enabled: true
+    required_approvers: 1
+    timeout_hours: 48
+    
+  gate_1_problem_solution_fit:
+    enabled: true
+    required_approvers: 1
+    timeout_hours: 24
+    
+  gate_2_architecture_review:
+    enabled: true
+    required_approvers: 1
+    timeout_hours: 12
+    
+  gate_3_release_readiness:
+    enabled: true
+    required_approvers: 1
+    timeout_hours: 6
+
+# Project Management
+project:
+  # Default project structure
+  base_template: "neoforge"
+  
+  # Startup naming convention
+  startup_prefix: "s-"
+  startup_format: "{prefix}{number:02d}"  # s-01, s-02, etc.
+  
+  # Git configuration
+  git:
+    auto_commit: true
+    commit_message_template: "{type}: {description}\n\n🤖 Generated with AI Orchestrator"
+    branch_naming: "feat/{area}/{agent}/{issue-id}"
+    
+  # Quality gates
+  quality:
+    min_test_coverage: 80
+    max_build_time_minutes: 10
+    required_linting: true
+    security_scanning: true
+
+# Logging and Monitoring
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  file: "logs/orchestrator.log"
+  max_file_size_mb: 100
+  backup_count: 5
+  
+  # Console output
+  console_output: true
+  colors: true
+  
+  # Structured logging
+  structured: true
+  include_timestamps: true
+
+# Integrations
+integrations:
+  # GitHub integration
+  github:
+    enabled: false
+    token: "your-github-token"
+    organization: "your-org"
+    auto_create_repos: false
+    
+  # Slack notifications
+  slack:
+    enabled: false
+    webhook_url: "your-slack-webhook"
+    channels:
+      alerts: "#startup-factory-alerts"
+      progress: "#startup-factory-progress"
+      
+  # Email notifications
+  email:
+    enabled: false
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    username: "your-email@gmail.com"
+    password: "your-app-password"
+    from_address: "startup-factory@yourcompany.com"
+
+# Development Settings
+development:
+  # Mock API responses for testing
+  mock_apis: false
+  
+  # Skip human gates for development
+  skip_human_gates: false
+  
+  # Reduced budget limits for testing
+  test_budget_limits: false
+  
+  # Debug output
+  verbose_logging: true
+  
+  # Save intermediate results
+  save_intermediate_files: true
+  save_directory: "debug/"
+
+# Advanced Settings
+advanced:
+  # Retry configuration
+  max_retries: 3
+  retry_delay_seconds: 30
+  backoff_multiplier: 2
+  
+  # Parallel processing
+  max_parallel_tasks: 3
+  max_parallel_agents: 2
+  
+  # Cache configuration
+  cache_enabled: true
+  cache_ttl_hours: 24
+  cache_directory: ".cache/"
+  
+  # Performance monitoring
+  performance_monitoring: true
+  metrics_collection: true
+  metrics_endpoint: "http://localhost:9090"
+
+# Security Settings
+security:
+  # API key encryption
+  encrypt_api_keys: false
+  encryption_key_file: ".encryption_key"
+  
+  # Audit logging
+  audit_log: true
+  audit_log_file: "logs/audit.log"
+  
+  # Rate limiting
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 60
+    requests_per_hour: 1000
+    
+  # Allowed file types for processing
+  allowed_file_extensions:
+    - ".py"
+    - ".js"
+    - ".ts"
+    - ".jsx"
+    - ".tsx"
+    - ".html"
+    - ".css"
+    - ".md"
+    - ".json"
+    - ".yaml"
+    - ".yml"
+    - ".toml"
+    - ".txt"

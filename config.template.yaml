@@ -1,0 +1,19 @@
+# MVP Orchestrator Configuration
+# Copy this to config.yaml and fill in your API keys
+
+# API Keys (required)
+openai_api_key: "sk-..."
+anthropic_api_key: "sk-ant-..."
+perplexity_api_key: "pplx-..."
+
+# Project Settings
+project_root: "./mvp_projects"
+max_retries: 3
+timeout: 30
+
+# Cost Tracking (update based on current pricing)
+openai_input_cost_per_1k: 0.01
+openai_output_cost_per_1k: 0.03
+anthropic_input_cost_per_1k: 0.015
+anthropic_output_cost_per_1k: 0.075
+perplexity_cost_per_request: 0.005
