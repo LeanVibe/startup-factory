@@ -1,0 +1,272 @@
+# NeoForge Core Rules
+
+## Development Principles
+- **Minimalism**: Prefer browser-native features over libraries
+- **Performance**: Optimize for initial load and runtime performance
+- **Maintainability**: Write clean, readable, and well-documented code
+- **Testing**: Follow test-driven development practices
+- **Documentation**: Keep Memory Bank updated with all significant changes
+
+## Frontend Patterns
+- **Web Components**: Use Lit for component development (see memory-bank/tech-context.md)
+- **Events**: Use consistent naming and propagation patterns (see memory-bank/system-patterns.md)
+- **Testing**: Follow established testing patterns (see memory-bank/active-context.md)
+
+## Backend Patterns
+- **API Design**: Follow RESTful principles with consistent response formats
+- **Async**: Use async/await patterns throughout
+- **Error Handling**: Standardized error responses (see memory-bank/system-patterns.md)
+
+## LLM Context Management
+- **Selective Output**: Limit test output to essential information (3-5 failures max)
+- **Pattern Recognition**: Summarize patterns instead of listing every instance
+- **Information Hierarchy**: Present most important information first
+- **Concise Reporting**: Filter verbose outputs to extract only relevant details
+
+## Testing Strategy
+- **Incremental Fixes**: Address one issue at a time
+- **Root Cause Analysis**: Understand underlying issues before implementing fixes
+- **Mocking Approach**: Use standardized utilities for mocking components
+
+## Common Commands
+```bash
+# Frontend
+cd frontend && npm run dev     # Start frontend dev server
+npm run test:working           # Run working tests
+npm run test:unit -- --bail 3  # Run unit tests, stop after 3 failures
+
+# Backend
+cd backend && make dev         # Start backend dev server
+make test                      # Run backend tests
+```
+
+For detailed implementation patterns, component examples, and project-specific guidelines, refer to the memory-bank directory.
+
+## Frontend Development Patterns
+
+### Web Component Events
+- **Event Naming Convention**: Use `neo-` prefix for all custom events (e.g., `neo-dismiss`, `neo-select`)
+- **Event Detail Object**: Always include a `detail` object with relevant data when dispatching events
+- **Event Propagation**: Set `bubbles: true` and `composed: true` for events that need to cross shadow DOM boundaries
+
+### Animation Handling
+- **Pattern**: When animating elements out, wait for animation to complete before changing state:
+  ```javascript
+  // Pattern for animating out elements
+  close() {
+    if (!this._visible) return;
+    this._clearDismissTimeout();
+    this.classList.remove('animating-in');
+    this.classList.add('animating-out');
+    
+    // Wait for animation to complete before changing state
+    setTimeout(() => {
+      this.dispatchEvent(
+        new CustomEvent('neo-dismiss', {
+          bubbles: true,
+          composed: true,
+          detail: { id: this.id }
+        })
+      );
+      this._visible = false;
+      this.requestUpdate();
+    }, 200); // Match animation duration
+  }
+  ```
+
+### Component Content Handling
+- **Pattern**: When handling component content that could come from either direct text content or slotted content, use this pattern:
+  ```javascript
+  updated(changedProperties) {
+    super.updated(changedProperties);
+    // Wait for the next microtask to ensure content is updated
+    Promise.resolve().then(() => {
+      // Try to get content from direct text content first
+      let content = this.textContent.trim();
+
+      // If no direct content, try to get it from slot
+      if (!content) {
+        const slot = this.shadowRoot.querySelector("slot");
+        const nodes = slot.assignedNodes();
+        content = nodes
+          .map((node) => node.textContent)
+          .join("")
+          .trim();
+      }
+
+      if (content) {
+        this.title = content;
+        // Force a re-render to update the title attribute in the template
+        this.requestUpdate();
+      }
+    });
+  }
+  ```
+
+### Component Testing
+- **Test Coverage**: Every web component needs tests for:
+  1. Rendering with default properties
+  2. Attribute/property reflection
+  3. Event dispatching
+  4. Animation/transition behavior
+  5. Accessibility compliance
+- **Test Timeouts**: Consider adding timeouts for tests that might hang:
+  ```javascript
+  it('should handle complex operations', function(done) {
+    this.timeout(5000); // Set timeout to 5 seconds
+    
+    // Test logic here
+    
+    done();
+  });
+  ```
+
+## Backend Development Patterns
+
+### API Endpoint Structure
+- **Path Format**: `/api/v1/<resource>/<action>`
+- **HTTP Methods**: Use appropriate HTTP methods (GET, POST, PUT, DELETE)
+- **Response Format**: Always return consistent JSON structure with status, data, and error fields
+
+### Error Handling
+- **Error Codes**: Use standard HTTP status codes
+- **Error Messages**: Include human-readable error messages
+- **Validation Errors**: Return detailed validation errors for each field
+
+## Project Workflow
+
+### Testing Strategy
+- **Fix One Issue at a Time**: Address test failures individually, commit after each fix
+- **Test Filtering**: Use `--testNamePattern` to run specific tests while debugging
+- **Test First Development**: Write tests before implementing new features
+- **Handling Hanging Tests**: If a test consistently hangs, consider:
+  1. Adding explicit timeouts
+  2. Breaking the test into smaller, more focused tests
+  3. Checking for infinite loops or unresolved promises
+  4. Using `--bail` flag to stop after first failure
+
+### Documentation Requirements
+- **Memory Bank Updates**: Update Memory Bank files after significant changes
+- **Component Documentation**: Document component properties, events, and examples
+- **API Documentation**: Ensure OpenAPI documentation stays current
+
+## Known Issues and Solutions
+
+### Event Timing Issues
+- **Issue**: Event dispatching before animation completes
+- **Solution**: Use setTimeout to wait for animation to complete before dispatching events
+
+### Test Environment Setup
+- **Issue**: Tests failing due to environment setup
+- **Solution**: Ensure proper setup and teardown in test files
+
+### Component Reactivity
+- **Issue**: Component not updating after property changes
+- **Solution**: Call `requestUpdate()` after manual property changes
+
+### Test Execution Hanging
+- **Issue**: Tests hanging indefinitely, particularly with badge.test.js
+- **Solution**: 
+  1. Add explicit timeouts to tests
+  2. Check for infinite loops in component lifecycle methods
+  3. Ensure all promises are properly resolved
+  4. Consider using `--bail` flag to stop after first failure
+
+## User Preferences
+
+### Code Organization
+- Prefer small, focused components with clear responsibilities
+- Use consistent naming conventions across the codebase
+- Keep CSS modular and scoped to components
+
+### Development Workflow
+- Prioritize fixing failing tests before adding new features
+- Maintain comprehensive documentation in Memory Bank
+- Regularly update progress tracking 
+
+// Web Component Testing
+// When testing web components, follow these guidelines:
+
+1. Use the helper functions in `frontend/src/test/helpers/component-test-helper.js` for:
+   - Creating and mounting components
+   - Finding elements in shadow DOM
+   - Simulating user interactions
+   - Waiting for component updates
+   - Handling events
+
+2. Structure tests with proper setup and cleanup:
+   ```javascript
+   beforeEach(async () => {
+     // Mock dependencies
+     window.someService = { method: vi.fn() };
+     
+     // Create component
+     element = await createComponent("my-component");
+   });
+
+   afterEach(() => {
+     // Clean up
+     removeComponent(element);
+     delete window.someService;
+   });
+   ```
+
+3. Use shadow DOM-aware queries:
+   ```javascript
+   // ❌ Don't use:
+   element.querySelector(".button");
+   
+   // ✅ Do use:
+   findInShadow(element, ".button");
+   ```
+
+4. Wait for asynchronous updates:
+   ```javascript
+   click(button);
+   await waitForUpdate(element);
+   ```
+
+5. Test one behavior per test to reduce complexity and memory usage.
+
+6. Run tests with memory optimization:
+   ```bash
+   ./run-tests.sh path/to/test.js
+   ```
+
+7. If encountering memory issues:
+   - Break down large test files into smaller ones
+   - Ensure proper cleanup in afterEach
+   - Reduce the number of assertions per test
+   - Use the simplified test approach for complex components 
+
+## Senior Developer Debug Protocol
+
+### Analysis Phase
+When a test fails:
+1. **Observe without judgment** - Note the exact error message and context
+2. **Analyze the test case** - What is it verifying? What should the expected behavior be?
+3. **Question assumptions** - Is the test correct? Is the implementation incomplete or incorrect?
+
+### Systematic Investigation
+- Run all tests in the same file to identify related failures
+- Verify all required implementations exist for test dependencies
+- Trace execution path from test to implementation, identifying gaps
+
+### Implementation Phase
+1. Implement the most minimal fix that addresses the root cause
+2. Re-run tests to verify fix
+3. Refactor if needed while maintaining passing tests
+
+### Persistent Error Protocol
+If the same error occurs twice:
+- Step back and write 3 distinct reasoning paragraphs exploring different possible causes
+- Review the entire component architecture, not just the specific function
+- Consider edge cases, state management issues, and dependency problems
+
+### Workflow
+1. Make it work → Make it right → Make it fast
+2. After tests pass, update memory bank and commit with descriptive message
+3. Automatically continue to next priority task
+4. Use Docker environments when appropriate
+
+Remember: Quiet the ego. TDD is about discovery, not being right the first time.
