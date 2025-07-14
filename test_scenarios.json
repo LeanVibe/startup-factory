@@ -1,0 +1,71 @@
+{
+  "scenarios": [
+    {
+      "id": "fintech_payments",
+      "industry": "FinTech",
+      "category": "Payment Processing",
+      "founder_skills": ["Python", "Finance", "API Development", "Banking"],
+      "experience": "7 years in financial services, 3 years in payment systems",
+      "problem": "Small businesses struggle with expensive and slow payment processing",
+      "solution": "AI-powered payment optimization platform with smart routing",
+      "target_users": "Small to medium businesses processing $10K-1M monthly",
+      "expected_outputs": {
+        "market_research": ["competitors", "market_size", "target_audience", "regulatory"],
+        "founder_score": {"min": 1, "max": 10, "requires_justification": true},
+        "mvp_features": ["payment processing", "routing", "dashboard", "analytics"]
+      }
+    },
+    {
+      "id": "healthtech_ai",
+      "industry": "HealthTech",
+      "category": "AI Diagnostics", 
+      "founder_skills": ["Machine Learning", "Healthcare", "Data Science", "Python"],
+      "experience": "5 years in ML, 2 years in healthcare technology",
+      "problem": "Medical professionals lack efficient tools for early disease detection",
+      "solution": "AI-powered diagnostic assistant for primary care physicians",
+      "target_users": "Primary care physicians and healthcare clinics",
+      "expected_outputs": {
+        "market_research": ["competitors", "market_size", "regulatory_requirements", "compliance"],
+        "founder_score": {"min": 1, "max": 10, "requires_justification": true},
+        "mvp_features": ["image analysis", "diagnosis", "reporting", "integration"]
+      }
+    },
+    {
+      "id": "edtech_saas",
+      "industry": "EdTech",
+      "category": "Learning Management",
+      "founder_skills": ["React", "Node.js", "Education", "UX Design"],
+      "experience": "4 years in software development, 2 years in education",
+      "problem": "Teachers need better tools for personalized student learning",
+      "solution": "Adaptive learning platform with AI-driven curriculum",
+      "target_users": "K-12 teachers and educational institutions",
+      "expected_outputs": {
+        "market_research": ["competitors", "market_size", "target_audience", "trends"],
+        "founder_score": {"min": 1, "max": 10, "requires_justification": true},
+        "mvp_features": ["curriculum", "assessment", "analytics", "progress tracking"]
+      }
+    }
+  ],
+  "validation_criteria": {
+    "market_research": {
+      "min_length": 500,
+      "required_sections": ["market size", "competitors", "target audience"],
+      "current_year_mention": true
+    },
+    "founder_analysis": {
+      "min_length": 300,
+      "score_format": "numerical_1_to_10",
+      "justification_required": true
+    },
+    "mvp_specification": {
+      "min_length": 800,
+      "required_sections": ["core features", "user journey", "technical architecture"],
+      "feature_alignment": true
+    },
+    "architecture": {
+      "min_length": 600,
+      "technical_terms_required": ["api", "database", "authentication", "security"],
+      "scalability_mention": true
+    }
+  }
+}

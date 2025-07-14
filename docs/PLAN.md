@@ -71,58 +71,102 @@ ci:
 
 ## Detailed Action Plan
 
-### Phase 1: Critical Infrastructure Fixes (1-2 hours)
+### Phase 1: Critical Path Execution (8-10 hours)
 
-#### **Task 1.1: Fix Makefile Syntax**
-**Priority**: 🔥 Critical  
-**Estimated Time**: 10 minutes  
-**Owner**: Claude
+#### **Task 1.1: End-to-End Integration Testing** ✅ **HIGH PRIORITY**
+**Estimated Time**: 4-6 hours  
+**Owner**: Claude Code  
+**Dependencies**: Valid API keys for OpenAI, Anthropic, Perplexity
 
-**Steps**:
-1. Replace literal `\t` with actual tab characters in Makefile
-2. Test `make init STARTUP=test` command
-3. Verify all Makefile targets work correctly
-4. Clean up any created test directories
+**Sub-tasks**:
+1. **MVP Orchestrator Workflow Testing** (2-3 hours)
+   - Setup test environment with real API keys
+   - Test complete workflow: Market Research → Founder Analysis → MVP Spec → Architecture
+   - Validate human gates and project persistence
+   - Measure performance and cost metrics
 
-**Validation**:
-- [ ] `make init STARTUP=test` creates startup directory
-- [ ] `make dev` starts Docker Compose
-- [ ] `make ci` runs lint/test pipeline
+2. **Template Integration Testing** (1-2 hours)
+   - Test project generation via orchestrator
+   - Validate meta-fill integration works
+   - Ensure generated projects build and run successfully
+   - Test Docker Compose and API endpoints
 
-#### **Task 1.2: Install Dependencies**
-**Priority**: 🔥 Critical  
-**Estimated Time**: 20 minutes  
-**Owner**: Claude
+3. **Error Handling Validation** (1 hour)
+   - Test API failure scenarios and recovery
+   - Validate invalid input handling
+   - Test human gate timeout scenarios
+   - Ensure graceful error messages and recovery
 
-**Steps**:
-1. Create `requirements.txt` with cookiecutter
-2. Create `requirements-dev.txt` with development dependencies
-3. Install cookiecutter: `pip install cookiecutter`
-4. Update CI pipeline to install dependencies
-5. Test startup creation process
+**Validation Criteria**:
+- [ ] Complete workflow runs without fatal errors
+- [ ] All AI providers respond correctly (OpenAI, Anthropic, Perplexity)
+- [ ] Generated projects pass quality gates (build, test, run)
+- [ ] Cost tracking accurate within 5% margin
+- [ ] Error scenarios handled gracefully with clear messages
 
-**Validation**:
-- [ ] `cookiecutter --version` works
-- [ ] `pip install -r requirements.txt` succeeds
-- [ ] `bash scripts/new_startup.sh test` creates startup
+#### **Task 1.2: API Integration Validation** ✅ **HIGH PRIORITY**
+**Estimated Time**: 2-3 hours  
+**Owner**: Claude Code  
+**Dependencies**: Task 1.1 environment setup
 
-#### **Task 1.3: Test Startup Creation**
-**Priority**: 🔥 Critical  
-**Estimated Time**: 30 minutes  
-**Owner**: Claude
+**Sub-tasks**:
+1. **OpenAI Integration** (45 min)
+   - Test GPT-4o code generation capabilities
+   - Validate response parsing and cost calculation
+   - Test different model parameters and rate limiting
 
-**Steps**:
-1. Run full startup creation: `make init STARTUP=test-startup`
-2. Verify template instantiation works
-3. Test basic functionality of created startup
-4. Clean up test startup
-5. Document any issues found
+2. **Anthropic Integration** (45 min)
+   - Test Claude-3.5-sonnet for complex reasoning
+   - Validate MVP specification and architecture generation
+   - Test multi-step reasoning and planning tasks
 
-**Validation**:
-- [ ] Startup directory created successfully
-- [ ] All template files instantiated
-- [ ] Docker Compose starts without errors
-- [ ] Basic API endpoints respond
+3. **Perplexity Integration** (45 min)
+   - Test market research API calls with real-time data
+   - Validate app integration fallback mechanisms
+   - Test search automation and result formatting
+
+4. **Integration Stress Testing** (30 min)
+   - Test concurrent API calls and provider switching
+   - Validate failover mechanisms and error propagation
+   - Test rate limiting and budget controls
+
+**Validation Criteria**:
+- [ ] All three AI providers integrate successfully
+- [ ] API calls complete within expected timeframes (<30s avg)
+- [ ] Cost tracking accurate for all providers (±2%)
+- [ ] Failover and error handling work correctly
+- [ ] Rate limiting respected across all providers
+
+#### **Task 1.3: Production Configuration Setup** ✅ **HIGH PRIORITY**
+**Estimated Time**: 1-2 hours  
+**Owner**: Claude Code  
+**Dependencies**: Tasks 1.1 and 1.2 completion
+
+**Sub-tasks**:
+1. **Configuration Management** (45 min)
+   - Create production config template with environment variables
+   - Implement environment setup script
+   - Add configuration validation and security checks
+   - Document API key management best practices
+
+2. **Security Implementation** (30 min)
+   - Implement secure API key management
+   - Add cost monitoring and budget alerts
+   - Implement auto-shutdown on budget exceeded
+   - Add security scanning and validation
+
+3. **Monitoring Setup** (30 min)
+   - Configure structured logging with metrics
+   - Implement health check endpoints
+   - Add Prometheus metrics collection
+   - Create monitoring dashboard
+
+**Validation Criteria**:
+- [ ] Production config template complete and secure
+- [ ] Environment setup script works end-to-end
+- [ ] API keys properly secured with environment variables
+- [ ] Cost monitoring and alerts functional
+- [ ] Health checks and monitoring operational
 
 ### Phase 2: Quality Assurance (1-2 hours)
 
@@ -350,6 +394,24 @@ ci:
 
 ---
 
-**Last Updated**: July 5, 2025  
-**Next Review**: After each phase completion  
-**Contact**: Claude Code Assistant
+---
+
+## 🚀 **EXECUTION STATUS UPDATE**
+
+**Plan Refinement Complete**: Gemini CLI feedback incorporated  
+**Improved Plan**: See `docs/IMPROVED_EXECUTION_PLAN.md` for detailed 16-20 hour execution plan  
+**Key Improvements**:
+- Realistic timeline (16-20 hours vs original 10 hours)
+- Enhanced security validation with automated scanning
+- Objective quality metrics for AI outputs
+- Parallel execution tracks for time optimization
+- Comprehensive risk mitigation strategies
+
+**Next Actions**: Begin execution of Priority A items per improved plan
+
+---
+
+**Last Updated**: July 14, 2025  
+**Next Review**: After Priority A completion  
+**Contact**: Claude Code Assistant  
+**Detailed Plan**: `docs/IMPROVED_EXECUTION_PLAN.md`
