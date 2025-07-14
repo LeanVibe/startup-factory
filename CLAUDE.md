@@ -14,14 +14,24 @@ This file provides guidance to Claude Code when working with the Startup Factory
 
 ## Architecture Overview
 
-### Multi-Startup Monorepo Structure
+### Multi-Startup Monorepo Structure (Current)
 ```
 startup-factory/
-├── templates/neoforge/          # Base template (FastAPI + LitPWA)
-├── s-01/ ... s-10/             # Individual startup directories
-├── tools/                      # AI orchestration tools
-├── patches/                    # Template overrides
-└── docs/                       # Methodology documentation
+├── templates/neoforge/          # Cookiecutter template (FastAPI + LitPWA)
+│   └── {{cookiecutter.project_slug}}/  # Template project structure
+├── tools/                       # AI orchestration tools
+│   ├── mvp-orchestrator-script.py      # Main orchestrator
+│   ├── meta-fill-integration.py        # Meta-fill integration
+│   ├── perplexity-app-integration.py   # Perplexity integration
+│   └── mvp_projects/                   # Generated project data
+├── docs/                        # Documentation and plans
+│   ├── PLAN.md                  # Launch readiness plan
+│   ├── TODO.md                  # Development roadmap
+│   └── SETUP.md                 # Setup instructions
+├── scripts/                     # Automation scripts
+│   └── new_startup.sh           # Startup creation script
+├── patches/                     # Template customizations
+└── s-01/                        # Example startup (for testing)
 ```
 
 ### Technology Stack
@@ -34,17 +44,23 @@ startup-factory/
 
 ## AI Agent Orchestration
 
-### Task Distribution Matrix
+### Task Distribution Matrix (As Implemented)
 ```python
-TASK_MAP = {
-    "research": "perplexity",        # Market research, competitive analysis
-    "planning": "claude",            # Strategic planning, complex reasoning
-    "architecture": "claude-code",   # System architecture, code review
-    "backend": "gemini-cli",         # Backend development
-    "frontend": "codex-cli",         # Frontend development
-    "ios": "gemini-cli",            # iOS development (optional)
-    "testing": "qodo",              # Test generation, code quality
+# Current implementation in mvp-orchestrator-script.py
+AI_PROVIDER_USAGE = {
+    "market_research": "perplexity",      # Market research, competitive analysis
+    "founder_analysis": "anthropic",      # Strategic planning, complex reasoning  
+    "mvp_specification": "anthropic",     # MVP spec and planning
+    "architecture": "anthropic",          # System architecture design
+    "code_generation": "openai",          # Code generation (GPT-4o)
+    "quality_checks": "anthropic",        # Code review and quality
+    "deployment": "anthropic",            # Deployment configuration
 }
+
+# Future roadmap includes:
+# - gemini-cli integration for backend development
+# - codex-cli integration for frontend development  
+# - qodo integration for test generation
 ```
 
 ### Human-in-the-Loop Gates
@@ -166,13 +182,14 @@ npm run build
 
 ## AI Integration Guidelines
 
-### When to Use Each AI Agent
+### When to Use Each AI Agent (Current Implementation)
 - **Perplexity:** Real-time market research, competitive analysis
-- **Claude:** Complex reasoning, strategic planning, technical writing
-- **ChatGPT:** Creative ideation, content generation, user stories
-- **Gemini:** Multi-modal analysis, comprehensive research
-- **GitHub Copilot:** Real-time code completion
-- **Qodo:** Test generation, code quality assurance
+- **Anthropic (Claude):** Strategic planning, MVP specs, architecture, quality checks, deployment
+- **OpenAI (GPT-4o):** Code generation, implementation tasks
+- **Future integrations:**
+  - **Gemini:** Multi-modal analysis, backend development
+  - **Codex:** Frontend development  
+  - **Qodo:** Test generation, code quality assurance
 
 ### Budget and Cost Management
 - **Per-Task Limits:** 20k tokens, 15 minutes maximum
@@ -316,8 +333,11 @@ docker compose logs -f <service>
 # Run specific test with debug
 pytest -v -s tests/path/to/test.py
 
-# Check AI orchestrator status
-python tools/mvp-orchestrator-script.py --status
+# Run MVP orchestrator
+uv run tools/mvp-orchestrator-script.py
+
+# Test orchestrator components
+python tools/test-integration.py
 ```
 
 ## Best Practices
