@@ -1,0 +1,20 @@
+{
+  "project_id": "brandfocus-ai_20250715_001006",
+  "project_name": "brandfocus-ai",
+  "industry": "Professional Services & Knowledge Work",
+  "category": "AI-Powered Personal Branding Software",
+  "created_at": "2025-07-15 00:10:06.614794",
+  "current_phase": 1,
+  "phase_status": {
+    "phase_1": "failed"
+  },
+  "market_research": null,
+  "founder_analysis": null,
+  "mvp_spec": null,
+  "architecture": null,
+  "code_artifacts": {},
+  "deployment_config": null,
+  "gates": {},
+  "api_costs": {},
+  "time_spent": {}
+}

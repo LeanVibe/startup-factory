@@ -304,9 +304,15 @@ class EnhancedAPIManager:
         if not self.check_cli_availability('gemini'):
             raise Exception("Gemini CLI not available. Please install or provide Perplexity API key.")
         
+        # Create temporary file for prompt
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
+            f.write(f"# Research Task\n\n{prompt}\n\n")
+            f.write("Please provide comprehensive research and analysis on this topic.")
+            prompt_file = f.name
+        
         try:
-            # Use Gemini CLI with -print flag
-            cmd = ['gemini', '-print', '--query', prompt]
+            # Use Gemini CLI with prompt parameter
+            cmd = ['gemini', '-p', prompt]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
             
             if result.returncode != 0:
@@ -319,6 +325,9 @@ class EnhancedAPIManager:
             
         except subprocess.TimeoutExpired:
             raise Exception("Gemini CLI timed out after 5 minutes")
+        finally:
+            # Clean up temporary file
+            os.unlink(prompt_file)
     
     async def call_provider(self, provider: AIProvider, prompt: str, max_tokens: int = 4000) -> Tuple[str, float]:
         """Call provider with automatic fallback to CLI if API unavailable"""
@@ -506,7 +515,7 @@ Format: Structured markdown with clear sections
                 print(f"  Fallback: {config.fallback_mode.value}")
             print()
     
-    async def run_full_workflow(self):
+    async def run_full_workflow(self, non_interactive=False, test_inputs=None):
         """Run the complete MVP development workflow with fallbacks"""
         print("🚀 Starting Enhanced MVP Development Workflow")
         print("=" * 60)
@@ -514,16 +523,46 @@ Format: Structured markdown with clear sections
         # Display provider status
         self.display_provider_status()
         
-        # Collect basic project info
-        industry = input("Enter industry (e.g., 'fintech', 'healthtech'): ").strip()
-        category = input("Enter category (e.g., 'payments', 'wellness'): ").strip()
-        
-        founder_profile = {
-            'skills': input("Your key skills: ").strip(),
-            'experience': input("Relevant experience: ").strip(),
-            'network': input("Professional network: ").strip(),
-            'resources': input("Available resources: ").strip()
-        }
+        if non_interactive and test_inputs:
+            # Use provided test inputs
+            industry = test_inputs.get('industry', 'fintech')
+            category = test_inputs.get('category', 'AI payments')
+            founder_profile = test_inputs.get('founder_profile', {
+                'skills': 'Software development, product management',
+                'experience': '5 years in fintech, 3 years as PM',
+                'network': 'Financial services, tech startups',
+                'resources': 'Personal savings $100k, full-time availability'
+            })
+            
+            print(f"📋 Using non-interactive mode:")
+            print(f"  Industry: {industry}")
+            print(f"  Category: {category}")
+            print(f"  Founder Profile: {founder_profile}")
+        else:
+            # Interactive mode
+            try:
+                industry = input("Enter industry (e.g., 'fintech', 'healthtech'): ").strip()
+                category = input("Enter category (e.g., 'payments', 'wellness'): ").strip()
+                
+                founder_profile = {
+                    'skills': input("Your key skills: ").strip(),
+                    'experience': input("Relevant experience: ").strip(),
+                    'network': input("Professional network: ").strip(),
+                    'resources': input("Available resources: ").strip()
+                }
+            except (EOFError, KeyboardInterrupt):
+                print("\n🤖 Interactive input not available, switching to demo mode...")
+                industry = "AI-powered fintech"
+                category = "smart payment analytics"
+                founder_profile = {
+                    'skills': 'Machine learning, financial modeling, product management',
+                    'experience': '7 years in fintech, 4 years building ML systems',
+                    'network': 'Banking executives, fintech founders, ML engineers',
+                    'resources': 'Series A funding $2M, team of 5 engineers'
+                }
+                print(f"📋 Demo inputs:")
+                print(f"  Industry: {industry}")
+                print(f"  Category: {category}")
         
         print("\n" + "=" * 60)
         print("🎯 Executing Workflow Phases")
@@ -537,11 +576,29 @@ Format: Structured markdown with clear sections
         founder_analysis = await self.run_founder_analysis(market_data['content'], founder_profile)
         print(f"✅ Founder analysis completed using {founder_analysis['provider']}")
         
-        # Phase 3: MVP Specification (requires user input)
-        print("\n📝 Based on the analysis, please provide:")
-        problem = input("Problem to solve: ").strip()
-        solution = input("Proposed solution: ").strip()
-        target_users = input("Target users: ").strip()
+        # Phase 3: MVP Specification
+        print("\n📝 Phase 3: MVP Specification")
+        if non_interactive and test_inputs:
+            problem = test_inputs.get('problem', 'Complex payment processing and fraud detection')
+            solution = test_inputs.get('solution', 'AI-powered real-time payment analytics and risk assessment')
+            target_users = test_inputs.get('target_users', 'Financial institutions, payment processors, fintech companies')
+            print(f"  Problem: {problem}")
+            print(f"  Solution: {solution}")
+            print(f"  Target Users: {target_users}")
+        else:
+            try:
+                print("Based on the analysis, please provide:")
+                problem = input("Problem to solve: ").strip()
+                solution = input("Proposed solution: ").strip()
+                target_users = input("Target users: ").strip()
+            except (EOFError, KeyboardInterrupt):
+                print("🤖 Using demo specification inputs...")
+                problem = "Financial institutions need real-time fraud detection and payment optimization"
+                solution = "AI-powered analytics platform that processes payment data in real-time to detect fraud patterns and optimize transaction success rates"
+                target_users = "Banks, payment processors, fintech companies, and e-commerce platforms processing high-volume transactions"
+                print(f"  Problem: {problem}")
+                print(f"  Solution: {solution}")
+                print(f"  Target Users: {target_users}")
         
         mvp_spec = await self.generate_mvp_spec(problem, solution, target_users)
         print(f"✅ MVP specification completed using {mvp_spec['provider']}")

@@ -1,0 +1,14 @@
+{
+  "project_id": "brandfocus-ai-test_20250715_001437",
+  "project_name": "BrandFocus AI",
+  "industry": "Professional Services & Knowledge Work",
+  "category": "AI-Powered Personal Branding Software",
+  "created_at": "2025-07-15T00:14:37.445303",
+  "current_phase": 1,
+  "phase_status": {
+    "phase_1": "failed"
+  },
+  "test_mode": true,
+  "error": "All methods failed for Perplexity: Gemini CLI failed: Options:\n  -m, --model                    Model      [string] [default: \"gemini-2.5-pro\"]\n  -p, --prompt                   Prompt. Appended to input on stdin (if any).\n                                                                        [string]\n  -s, --sandbox                  Run in sandbox?                       [boolean]\n      --sandbox-image            Sandbox image URI.                     [string]\n  -d, --debug                    Run in debug mode?   [boolean] [default: false]\n  -a, --all_files                Include ALL files in context?\n                                                      [boolean] [default: false]\n      --show_memory_usage        Show memory usage in status bar\n                                                      [boolean] [default: false]\n  -y, --yolo                     Automatically accept all actions (aka YOLO\n                                 mode, see\n                                 https://www.youtube.com/watch?v=xvFZjo5PgG0 for\n                                 more details)?       [boolean] [default: false]\n      --telemetry                Enable telemetry? This flag specifically\n                                 controls if telemetry is sent. Other\n                                 --telemetry-* flags set specific values but do\n                                 not enable telemetry on their own.    [boolean]\n      --telemetry-target         Set the telemetry target (local or gcp).\n                                 Overrides settings files.\n                                              [string] [choices: \"local\", \"gcp\"]\n      --telemetry-otlp-endpoint  Set the OTLP endpoint for telemetry. Overrides\n                                 environment variables and settings files.\n                                                                        [string]\n      --telemetry-log-prompts    Enable or disable logging of user prompts for\n                                 telemetry. Overrides settings files.  [boolean]\n  -c, --checkpointing            Enables checkpointing of file edits\n                                                      [boolean] [default: false]\n  -v, --version                  Show version number                   [boolean]\n  -h, --help                     Show help                             [boolean]\n\nUnknown arguments: r, i, n, t, query\n",
+  "total_time": 1.8969709873199463
+}
