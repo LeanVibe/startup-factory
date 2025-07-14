@@ -1,0 +1,13 @@
+{
+    "project_name": "ExTrackAI",
+    "project_slug": "extrackai",
+    "project_short_description": "An AI-powered expense tracking and reimbursement platform for small to medium businesses.",
+    "author_name": "Startup Founder",
+    "author_email": "founder@extrackai.com",
+    "version": "0.1.0",
+    "use_pytest": "y",
+    "use_black": "y", 
+    "use_mypy": "y",
+    "create_author_file": "y",
+    "open_source_license": "MIT"
+}

@@ -1,0 +1,25 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alert_rules.yml"
+
+scrape_configs:
+  - job_name: 'startup-factory'
+    static_configs:
+      - targets: ['localhost:8000']
+    scrape_interval: 5s
+    metrics_path: /metrics
+
+  - job_name: 'startup-factory-health'
+    static_configs:
+      - targets: ['localhost:8001']
+    scrape_interval: 30s
+    metrics_path: /health
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093

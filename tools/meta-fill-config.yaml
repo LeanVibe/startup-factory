@@ -1,0 +1,77 @@
+# Meta-Fill Configuration
+# Configuration for AI-powered metadata generation and template filling
+
+# AI Provider Settings
+openai_api_key: "${OPENAI_API_KEY}"
+anthropic_api_key: "${ANTHROPIC_API_KEY}"
+
+# AI Usage Preferences
+use_openai_for_generation: true
+use_anthropic_for_validation: true
+max_tokens: 2000
+temperature: 0.7
+
+# Template Settings
+default_template: "neoforge"
+templates_directory: "../templates"
+output_directory: "../projects"
+
+# Project Generation Settings
+default_author: "Startup Factory"
+default_license: "MIT"
+default_version: "0.1.0"
+
+# Business Model Defaults
+default_business_model: "SaaS"
+default_pricing_model: "subscription"
+default_development_time: "4 weeks"
+default_team_size: 1
+
+# Technical Defaults
+default_database: "postgresql"
+default_use_auth: true
+default_use_payments: false
+default_use_ai_features: false
+
+# Quality Settings
+enable_metadata_validation: true
+enable_template_validation: true
+enable_project_structure_validation: true
+
+# Integration Settings
+integrate_with_mvp_orchestrator: true
+save_generation_history: true
+enable_cost_tracking: true
+
+# Startup Factory Specific Settings
+startup_factory_version: "1.0"
+enable_workflow_integration: true
+create_development_guides: true
+create_workflow_checklists: true
+
+# Cost Management
+max_cost_per_generation: 0.50  # Maximum cost in USD per metadata generation
+warn_on_cost_threshold: 0.25   # Warn when approaching cost limit
+
+# File Generation Settings
+generate_readme: true
+generate_development_guide: true
+generate_api_documentation: true
+generate_deployment_guide: true
+generate_testing_guide: true
+
+# Validation Rules
+required_fields:
+  - project_name
+  - project_slug
+  - industry
+  - category
+  - description
+  - target_audience
+
+optional_fields:
+  - tech_stack
+  - business_model
+  - pricing_model
+  - competitive_advantage
+  - target_market_size

@@ -1,7 +1,49 @@
-#!/usr/bin/env python3
+#!/usr/bin/env uv run
+# /// script
+# requires-python = ">=3.10"
+# dependencies = [
+#     "anthropic>=0.45.0",
+#     "openai>=1.50.0",
+#     "pydantic>=2.9.0",
+#     "pydantic-ai>=0.0.14",
+#     "rich>=13.9.0",
+#     "aiofiles>=24.1.0",
+#     "httpx>=0.28.0",
+#     "pyyaml>=6.0.2",
+# ]
+# ///
 """
 MVP Development Orchestrator
 A comprehensive Python script to manage AI-powered MVP development workflow
+
+USAGE:
+    # Make script executable and run directly
+    chmod +x mvp-orchestrator-script.py
+    ./mvp-orchestrator-script.py
+
+    # Or use uv run (recommended)
+    uv run mvp-orchestrator-script.py
+
+FEATURES:
+    - Self-contained with automatic dependency management via uv
+    - Interactive workflow for MVP development
+    - Human-in-the-loop gates for decision making
+    - Multi-AI provider integration (OpenAI, Anthropic, Perplexity)
+    - Cost tracking and project management
+    - Document generation and storage
+
+REQUIREMENTS:
+    - Python 3.10+
+    - uv package manager (for automatic dependency management)
+    - API keys for OpenAI, Anthropic, and Perplexity
+
+SETUP:
+    1. Install uv: curl -LsSf https://astral.sh/uv/install.sh | sh
+    2. Run script: uv run mvp-orchestrator-script.py
+    3. Follow prompts to configure API keys
+
+Dependencies are automatically managed and installed in an isolated environment.
+No manual pip install required when using uv.
 """
 
 import os
@@ -13,20 +55,37 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 from enum import Enum
 from dataclasses import dataclass, field
-import yaml
 
-# Third-party imports
-import anthropic
-import openai
-from pydantic import BaseModel, Field, validator
-from pydantic_ai import Agent
-from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich.table import Table
-from rich.prompt import Confirm, Prompt
-from rich.logging import RichHandler
-import aiofiles
-import httpx
+# Check and install dependencies automatically
+try:
+    import yaml
+    import anthropic
+    import openai
+    from pydantic import BaseModel, Field, field_validator
+    from pydantic_ai import Agent
+    from rich.console import Console
+    from rich.progress import Progress, SpinnerColumn, TextColumn
+    from rich.table import Table
+    from rich.prompt import Confirm, Prompt
+    from rich.logging import RichHandler
+    import aiofiles
+    import httpx
+except ImportError as e:
+    print(f"""
+Missing dependency: {e}
+
+This script requires uv to manage dependencies automatically.
+
+Install uv:
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+
+Then run this script with:
+  uv run {__file__}
+
+Or manually install dependencies:
+  pip install anthropic openai pydantic pydantic-ai rich aiofiles httpx pyyaml
+""")
+    exit(1)
 
 # Initialize rich console for beautiful output
 console = Console()
@@ -69,6 +128,9 @@ class Config(BaseModel):
     max_retries: int = Field(default=3, description="Maximum API retry attempts")
     timeout: int = Field(default=30, description="API timeout in seconds")
     
+    # Perplexity integration options
+    use_perplexity_app: bool = Field(default=False, description="Use Perplexity app instead of API")
+    
     # Cost tracking
     openai_input_cost_per_1k: float = Field(default=0.01, description="OpenAI input cost per 1k tokens")
     openai_output_cost_per_1k: float = Field(default=0.03, description="OpenAI output cost per 1k tokens")
@@ -76,7 +138,8 @@ class Config(BaseModel):
     anthropic_output_cost_per_1k: float = Field(default=0.075, description="Anthropic output cost per 1k tokens")
     perplexity_cost_per_request: float = Field(default=0.005, description="Perplexity cost per request")
 
-    @validator('project_root')
+    @field_validator('project_root')
+    @classmethod
     def create_project_root(cls, v):
         v = Path(v)
         v.mkdir(parents=True, exist_ok=True)
@@ -235,6 +298,16 @@ class APIManager:
                 await asyncio.sleep(2 ** attempt)  # Exponential backoff
     
     async def _call_perplexity(self, prompt: str) -> Tuple[str, float]:
+        """Call Perplexity API or use app integration"""
+        # Check if user prefers app integration
+        use_app = getattr(self.config, 'use_perplexity_app', False)
+        
+        if use_app:
+            return await self._call_perplexity_app(prompt)
+        else:
+            return await self._call_perplexity_api(prompt)
+    
+    async def _call_perplexity_api(self, prompt: str) -> Tuple[str, float]:
         """Call Perplexity API"""
         url = "https://api.perplexity.ai/chat/completions"
         headers = {
@@ -258,6 +331,35 @@ class APIManager:
         self.total_costs[AIProvider.PERPLEXITY] += cost
         
         return content, cost
+    
+    async def _call_perplexity_app(self, prompt: str) -> Tuple[str, float]:
+        """Use Perplexity app integration"""
+        try:
+            # Import the app integration
+            import sys
+            sys.path.append(str(Path(__file__).parent))
+            from perplexity_app_integration import PerplexityAppManager
+            
+            manager = PerplexityAppManager()
+            
+            # Search in app
+            result, cost = manager.search_in_app(prompt)
+            console.print(result)
+            
+            # Get user input after they review results
+            import asyncio
+            loop = asyncio.get_event_loop()
+            content = await loop.run_in_executor(
+                None, manager.get_user_input_after_search, prompt
+            )
+            
+            self.total_costs[AIProvider.PERPLEXITY] += cost
+            return content, cost
+            
+        except Exception as e:
+            console.print(f"[red]App integration failed: {e}[/red]")
+            console.print("[yellow]Falling back to API...[/yellow]")
+            return await self._call_perplexity_api(prompt)
     
     def _calculate_openai_cost(self, usage) -> float:
         """Calculate OpenAI API cost"""
@@ -548,7 +650,110 @@ class MVPOrchestrator:
             "timestamp": datetime.now().isoformat()
         }
     
-    # ===== PHASE 5: DEPLOYMENT =====
+    # ===== PHASE 5: PROJECT GENERATION =====
+    
+    async def generate_complete_project(
+        self, 
+        project_id: str, 
+        template_name: str = "neoforge"
+    ) -> Dict[str, Any]:
+        """Phase 5.1: Generate complete project using Meta-Fill integration"""
+        console.print("\n[bold cyan]🏗️ Generating Complete Project[/bold cyan]")
+        
+        project = self.projects.get(project_id)
+        if not project:
+            raise ValueError(f"Project {project_id} not found")
+        
+        try:
+            # Import meta-fill integration
+            from pathlib import Path
+            import sys
+            sys.path.append(str(Path(__file__).parent))
+            from meta_fill_integration import MVPMetaIntegration
+            
+            # Create integration instance
+            meta_integration = MVPMetaIntegration()
+            
+            # Convert project data to meta-fill format
+            mvp_data = {
+                "project_id": project_id,
+                "project_name": project.project_name,
+                "industry": project.market_research.get("industry") if project.market_research else "Technology",
+                "category": project.market_research.get("category") if project.market_research else "B2B SaaS",
+                "market_research": project.market_research,
+                "founder_analysis": project.founder_analysis,
+                "mvp_spec": project.mvp_spec,
+                "architecture": project.architecture
+            }
+            
+            # Generate enhanced metadata
+            output_dir = self.config.project_root / project_id
+            metadata = await meta_integration.generate_project_from_mvp_data(
+                mvp_data, output_dir
+            )
+            
+            # Create complete project
+            project_path = meta_integration.create_startup_project(
+                metadata=metadata,
+                template_name=template_name,
+                project_id=project_id
+            )
+            
+            console.print(f"✅ Complete project generated at: {project_path}")
+            
+            return {
+                "project_path": str(project_path),
+                "metadata": metadata.__dict__,
+                "template_used": template_name,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+        except ImportError:
+            console.print("[yellow]Meta-Fill integration not available. Generating basic project structure...[/yellow]")
+            return await self._generate_basic_project(project_id)
+        except Exception as e:
+            console.print(f"[red]Project generation failed: {e}[/red]")
+            return await self._generate_basic_project(project_id)
+    
+    async def _generate_basic_project(self, project_id: str) -> Dict[str, Any]:
+        """Fallback: Generate basic project structure without Meta-Fill"""
+        project = self.projects[project_id]
+        project_dir = self.config.project_root / project_id / "generated_project"
+        project_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Create basic project files
+        readme_content = f"""# {project.project_name}
+
+Generated by MVP Orchestrator
+
+## Project Overview
+- Industry: {project.market_research.get('industry') if project.market_research else 'TBD'}
+- Category: {project.market_research.get('category') if project.market_research else 'TBD'}
+
+## Development Status
+- Architecture: {'Completed' if project.architecture else 'Pending'}
+- MVP Spec: {'Completed' if project.mvp_spec else 'Pending'}
+
+## Next Steps
+1. Review generated architecture
+2. Set up development environment
+3. Begin implementation
+
+Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+        
+        with open(project_dir / "README.md", "w") as f:
+            f.write(readme_content)
+        
+        console.print(f"✅ Basic project structure created at: {project_dir}")
+        
+        return {
+            "project_path": str(project_dir),
+            "type": "basic",
+            "timestamp": datetime.now().isoformat()
+        }
+
+    # ===== PHASE 6: DEPLOYMENT =====
     
     async def prepare_deployment(self, platform: str, config: Dict[str, Any]) -> Dict[str, Any]:
         """Phase 5.2: Prepare deployment configuration"""
@@ -797,6 +1002,16 @@ class MVPOrchestrator:
             
             if gate_status == GateStatus.APPROVED:
                 console.print("[bold green]✅ Ready for development![/bold green]")
+                
+                # Phase 5: Generate Complete Project
+                console.print("\\n[bold]═══ PHASE 5: PROJECT GENERATION ═══[/bold]")
+                
+                if Confirm.ask("Generate complete project from template?"):
+                    project_generation = await self.generate_complete_project(project_id)
+                    console.print(f"[bold green]✅ Project generated at: {project_generation['project_path']}[/bold green]")
+                    
+                    # Save project generation info
+                    project.code_artifacts["project_generation"] = project_generation
             
             project.gates["architecture_review"] = gate_status
             await self.save_project(project_id)
@@ -837,6 +1052,10 @@ perplexity_api_key: "pplx-..."
 project_root: "./mvp_projects"
 max_retries: 3
 timeout: 30
+
+# Perplexity Integration (macOS only)
+# Set to true to use Perplexity app instead of API
+use_perplexity_app: false
 
 # Cost Tracking (update based on current pricing)
 openai_input_cost_per_1k: 0.01

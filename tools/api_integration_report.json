@@ -1,0 +1,51 @@
+{
+  "timestamp": 1752524617.268651,
+  "total_tests": 6,
+  "passed": 6,
+  "failed": 0,
+  "total_cost_estimate": 0.35325,
+  "results": [
+    {
+      "test_name": "OpenAI Configuration",
+      "status": "PASS",
+      "details": "Configuration valid. Test call would cost ~$0.0180",
+      "cost_estimate": 0.018000000000000002,
+      "timestamp": 1752524617.2685618
+    },
+    {
+      "test_name": "Anthropic Configuration",
+      "status": "PASS",
+      "details": "Configuration valid. Test call would cost ~$0.0390",
+      "cost_estimate": 0.039,
+      "timestamp": 1752524617.268568
+    },
+    {
+      "test_name": "Perplexity Configuration",
+      "status": "PASS",
+      "details": "Configuration valid. App integration: disabled. Cost per request: $0.005",
+      "cost_estimate": 0.005,
+      "timestamp": 1752524617.268573
+    },
+    {
+      "test_name": "MVP Orchestrator Compatibility",
+      "status": "PASS",
+      "details": "MVP orchestrator script and project structure compatible",
+      "cost_estimate": 0.0,
+      "timestamp": 1752524617.268617
+    },
+    {
+      "test_name": "Workflow Cost Estimation",
+      "status": "PASS",
+      "details": "Total cost: $0.29, Budget utilization: 1.9%",
+      "cost_estimate": 0.29125,
+      "timestamp": 1752524617.268636
+    },
+    {
+      "test_name": "Error Handling Configuration",
+      "status": "PASS",
+      "details": "Retries: 5, Timeout: 60s, Rate limiting: configured, Concurrency: configured",
+      "cost_estimate": 0.0,
+      "timestamp": 1752524617.26864
+    }
+  ]
+}

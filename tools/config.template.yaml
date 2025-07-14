@@ -11,10 +11,6 @@ project_root: "./mvp_projects"
 max_retries: 3
 timeout: 30
 
-# Perplexity Integration (macOS only)
-# Set to true to use Perplexity app instead of API
-use_perplexity_app: false
-
 # Cost Tracking (update based on current pricing)
 openai_input_cost_per_1k: 0.01
 openai_output_cost_per_1k: 0.03
