@@ -28,9 +28,11 @@ if [[ ! -f "config.yaml" ]]; then
     exit 1
 fi
 
-# Check required environment variables
+# Check environment variables and CLI fallbacks
 required_vars=("OPENAI_API_KEY" "ANTHROPIC_API_KEY" "PERPLEXITY_API_KEY")
 missing_vars=()
+cli_fallbacks=("opencode" "claude-p" "gemini")
+available_fallbacks=0
 
 for var in "${required_vars[@]}"; do
     if [[ -z "${!var:-}" ]]; then
@@ -38,36 +40,86 @@ for var in "${required_vars[@]}"; do
     fi
 done
 
-if [[ ${#missing_vars[@]} -gt 0 ]]; then
-    print_error "Missing required environment variables:"
-    printf '%s\n' "${missing_vars[@]}"
+# Check CLI fallback availability
+for tool in "${cli_fallbacks[@]}"; do
+    if command -v "$tool" >/dev/null 2>&1; then
+        available_fallbacks=$((available_fallbacks + 1))
+    fi
+done
+
+# Evaluate deployment options
+if [[ ${#missing_vars[@]} -eq 0 ]]; then
+    print_success "All API keys available - full functionality enabled"
+    deployment_mode="full"
+elif [[ $available_fallbacks -ge 2 ]]; then
+    print_warning "Some API keys missing, but CLI fallbacks available"
+    print_info "Missing API keys: ${missing_vars[*]}"
+    print_info "Available CLI tools: $available_fallbacks/3"
+    print_info "Deployment will use enhanced orchestrator with fallbacks"
+    deployment_mode="hybrid"
+elif [[ $available_fallbacks -ge 1 ]]; then
+    print_warning "Limited functionality - few CLI fallbacks available"
+    print_info "Consider running: ./scripts/setup_fallbacks.sh"
+    deployment_mode="limited"
+else
+    print_error "No API keys or CLI fallbacks available"
     echo ""
-    echo "Please set them before running deployment:"
-    echo "export OPENAI_API_KEY='sk-...'"
-    echo "export ANTHROPIC_API_KEY='sk-ant-...'"
-    echo "export PERPLEXITY_API_KEY='pplx-...'"
-    exit 1
+    echo "Options:"
+    echo "1. Set API keys:"
+    echo "   export OPENAI_API_KEY='sk-...'"
+    echo "   export ANTHROPIC_API_KEY='sk-ant-...'"
+    echo "   export PERPLEXITY_API_KEY='pplx-...'"
+    echo ""
+    echo "2. Install CLI fallbacks:"
+    echo "   ./scripts/setup_fallbacks.sh"
+    echo ""
+    read -p "Continue with limited functionality? (y/n): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+    deployment_mode="minimal"
 fi
 
-print_success "All required environment variables are set"
+print_success "Deployment mode: $deployment_mode"
 
-# Validate API key formats
-if [[ ! $OPENAI_API_KEY =~ ^sk- ]]; then
-    print_error "Invalid OpenAI API key format (should start with 'sk-')"
-    exit 1
+# Validate API key formats (only for available keys)
+echo "🔍 Validating available API key formats..."
+
+if [[ -n "${OPENAI_API_KEY:-}" ]]; then
+    if [[ $OPENAI_API_KEY =~ ^sk- ]]; then
+        print_success "OpenAI API key format valid"
+    else
+        print_error "Invalid OpenAI API key format (should start with 'sk-')"
+        exit 1
+    fi
+else
+    print_info "OpenAI API key not provided - will use CLI fallback if available"
 fi
 
-if [[ ! $ANTHROPIC_API_KEY =~ ^sk-ant- ]]; then
-    print_error "Invalid Anthropic API key format (should start with 'sk-ant-')"
-    exit 1
+if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+    if [[ $ANTHROPIC_API_KEY =~ ^sk-ant- ]]; then
+        print_success "Anthropic API key format valid"
+    else
+        print_error "Invalid Anthropic API key format (should start with 'sk-ant-')"
+        exit 1
+    fi
+else
+    print_info "Anthropic API key not provided - will use CLI fallback if available"
 fi
 
-if [[ ! $PERPLEXITY_API_KEY =~ ^pplx- ]]; then
-    print_error "Invalid Perplexity API key format (should start with 'pplx-')"
-    exit 1
+if [[ -n "${PERPLEXITY_API_KEY:-}" ]]; then
+    if [[ $PERPLEXITY_API_KEY =~ ^pplx- ]]; then
+        print_success "Perplexity API key format valid"
+    else
+        print_error "Invalid Perplexity API key format (should start with 'pplx-')"
+        exit 1
+    fi
+else
+    print_info "Perplexity API key not provided - will use CLI fallback if available"
 fi
 
-print_success "API key formats validated"
+print_success "Available API key formats validated"
 
 # Check Docker
 if ! command -v docker >/dev/null 2>&1; then
@@ -286,9 +338,14 @@ echo "  • Grafana:       http://localhost:3000 (admin/admin)"
 echo "  • AlertManager:  http://localhost:9093"
 echo ""
 echo "🔧 Management Commands:"
-echo "  • Health Check:  ./scripts/health_check.sh"
-echo "  • Backup Data:   ./scripts/backup_production.sh"
-echo "  • MVP Creation:  cd tools && ./mvp-orchestrator-script.py"
+echo "  • Health Check:     ./scripts/health_check_enhanced.sh"
+echo "  • Setup Fallbacks: ./scripts/setup_fallbacks.sh"
+echo "  • Backup Data:     ./scripts/backup_production.sh"
+if [[ "$deployment_mode" == "full" ]]; then
+    echo "  • MVP Creation:    cd tools && ./mvp-orchestrator-script.py"
+else
+    echo "  • MVP Creation:    cd tools && python enhanced_mvp_orchestrator.py"
+fi
 echo ""
 echo "💰 Cost Management:"
 echo "  • Budget per startup: \$15.00"
