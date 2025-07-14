@@ -55,6 +55,7 @@ class AIProvider(str, Enum):
     PERPLEXITY = "perplexity"
     OPENCODE_CLI = "opencode_cli"
     CLAUDE_P_CLI = "claude_p_cli"
+    CLAUDE_CODE_CLI = "claude_code_cli"
     GEMINI_CLI = "gemini_cli"
 
 class FallbackMode(str, Enum):
@@ -106,7 +107,7 @@ class EnhancedAPIManager:
                 primary_mode=FallbackMode.API,
                 fallback_mode=FallbackMode.CLI,
                 api_key_env="ANTHROPIC_API_KEY",
-                cli_command="claude-p",
+                cli_command="claude",  # Claude Code CLI is the primary fallback
                 cost_per_1k_input=self.config.get('anthropic_input_cost_per_1k', 0.015),
                 cost_per_1k_output=self.config.get('anthropic_output_cost_per_1k', 0.075),
                 available=ANTHROPIC_AVAILABLE and bool(os.getenv('ANTHROPIC_API_KEY'))
@@ -196,15 +197,56 @@ class EnhancedAPIManager:
         return content, cost
     
     async def call_anthropic_cli_fallback(self, prompt: str) -> Tuple[str, float]:
-        """Fallback to claude-p CLI when Anthropic API key is missing"""
-        print("🔄 Anthropic API key not available, using claude-p CLI fallback...")
+        """Fallback to Claude Code CLI when Anthropic API key is missing"""
+        print("🔄 Anthropic API key not available, using Claude Code CLI fallback...")
         
-        # Check if claude-p CLI is available
-        if not self.check_cli_availability('claude-p'):
-            raise Exception("claude-p CLI not available. Please install or provide Anthropic API key.")
+        # Check if Claude Code CLI is available first
+        if self.check_cli_availability('claude'):
+            return await self.call_claude_code_cli(prompt)
+        
+        # Fallback to claude-p if Claude Code CLI not available
+        if self.check_cli_availability('claude-p'):
+            return await self.call_claude_p_cli(prompt)
+        
+        raise Exception("No Claude CLI tools available. Please install Claude Code CLI or provide Anthropic API key.")
+    
+    async def call_claude_code_cli(self, prompt: str) -> Tuple[str, float]:
+        """Use Claude Code CLI for code generation and analysis"""
+        print("🤖 Using Claude Code CLI...")
+        
+        # Create temporary file for prompt
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
+            f.write(f"# Task\n\n{prompt}\n\n")
+            f.write("Please provide a comprehensive response following the requirements above.")
+            prompt_file = f.name
         
         try:
-            # Use claude-p for non-anthropic search
+            # Use Claude Code CLI with file input
+            cmd = ['claude', prompt_file]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            
+            if result.returncode != 0:
+                raise Exception(f"Claude Code CLI failed: {result.stderr}")
+            
+            # Claude Code CLI typically provides high-quality responses
+            # Estimate cost based on premium Claude usage
+            estimated_tokens = len(prompt.split()) + len(result.stdout.split())
+            cost = estimated_tokens * (self.providers[AIProvider.ANTHROPIC].cost_per_1k_input / 1000) * 0.8  # Slight discount for CLI
+            
+            return result.stdout.strip(), cost
+            
+        except subprocess.TimeoutExpired:
+            raise Exception("Claude Code CLI timed out after 5 minutes")
+        finally:
+            # Clean up temporary file
+            os.unlink(prompt_file)
+    
+    async def call_claude_p_cli(self, prompt: str) -> Tuple[str, float]:
+        """Use claude-p CLI as secondary fallback"""
+        print("🔄 Using claude-p CLI as secondary fallback...")
+        
+        try:
+            # Use claude-p for search functionality
             cmd = ['claude-p', '--search', '--query', prompt, '--format', 'text']
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
             
@@ -213,7 +255,7 @@ class EnhancedAPIManager:
             
             # Estimate cost (rough approximation)
             estimated_tokens = len(prompt.split()) + len(result.stdout.split())
-            cost = estimated_tokens * (self.providers[AIProvider.ANTHROPIC].cost_per_1k_input / 1000)
+            cost = estimated_tokens * (self.providers[AIProvider.ANTHROPIC].cost_per_1k_input / 1000) * 0.5  # Lower cost for search
             
             return result.stdout.strip(), cost
             

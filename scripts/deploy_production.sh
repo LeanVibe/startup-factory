@@ -31,7 +31,7 @@ fi
 # Check environment variables and CLI fallbacks
 required_vars=("OPENAI_API_KEY" "ANTHROPIC_API_KEY" "PERPLEXITY_API_KEY")
 missing_vars=()
-cli_fallbacks=("opencode" "claude-p" "gemini")
+cli_fallbacks=("opencode" "claude" "claude-p" "gemini")
 available_fallbacks=0
 
 for var in "${required_vars[@]}"; do

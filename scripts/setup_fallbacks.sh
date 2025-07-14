@@ -117,10 +117,64 @@ setup_opencode_cli() {
     fi
 }
 
-# Setup claude-p CLI (Anthropic fallback)
+# Setup Claude Code CLI (Primary Anthropic fallback)
+setup_claude_code_cli() {
+    echo ""
+    print_info "Setting up Claude Code CLI (Primary Anthropic fallback)..."
+    
+    if command_exists claude; then
+        print_success "Claude Code CLI already installed"
+        claude --version 2>/dev/null || print_success "Claude Code CLI is available"
+        return 0
+    fi
+    
+    print_info "Claude Code CLI not found. Installing..."
+    
+    # Claude Code CLI installation instructions
+    case $MACHINE in
+        Mac)
+            print_info "Installing Claude Code CLI for macOS..."
+            # Check if user has npm for installation
+            if command_exists npm; then
+                npm install -g @anthropic/claude-code
+            else
+                print_info "Please install Claude Code CLI manually:"
+                print_info "1. Visit: https://claude.ai/code"
+                print_info "2. Follow installation instructions for macOS"
+                print_info "3. Or use: npm install -g @anthropic/claude-code"
+            fi
+            ;;
+        Linux)
+            print_info "Installing Claude Code CLI for Linux..."
+            if command_exists npm; then
+                npm install -g @anthropic/claude-code
+            else
+                print_info "Please install Claude Code CLI manually:"
+                print_info "1. Visit: https://claude.ai/code"
+                print_info "2. Follow installation instructions for Linux"
+                print_info "3. Or use: npm install -g @anthropic/claude-code"
+            fi
+            ;;
+        *)
+            print_error "Please install Claude Code CLI manually from: https://claude.ai/code"
+            return 1
+            ;;
+    esac
+    
+    # Verify installation
+    if command_exists claude; then
+        print_success "Claude Code CLI installed successfully"
+    else
+        print_warning "Claude Code CLI installation may have failed"
+        print_info "Please install manually from: https://claude.ai/code"
+        return 1
+    fi
+}
+
+# Setup claude-p CLI (Secondary Anthropic fallback)
 setup_claude_p_cli() {
     echo ""
-    print_info "Setting up claude-p CLI (Anthropic fallback)..."
+    print_info "Setting up claude-p CLI (Secondary Anthropic fallback)..."
     
     if command_exists claude-p; then
         print_success "claude-p CLI already installed"
@@ -244,7 +298,7 @@ test_cli_tools() {
     echo ""
     print_info "Testing CLI tool installations..."
     
-    tools=("opencode" "claude-p" "gemini")
+    tools=("opencode" "claude" "claude-p" "gemini")
     working_tools=()
     failed_tools=()
     
@@ -295,10 +349,16 @@ cli_tools:
     command: "opencode"
     args: ["--non-interactive", "--input", "{input_file}", "--output", "text"]
     timeout: 300
+  claude:
+    command: "claude"
+    args: ["{input_file}"]
+    timeout: 300
+    description: "Claude Code CLI - Primary Anthropic fallback"
   claude_p:
     command: "claude-p"
     args: ["--search", "--query", "{query}", "--format", "text"]
     timeout: 300
+    description: "claude-p - Secondary Anthropic fallback"
   gemini:
     command: "gemini"
     args: ["-print", "--query", "{query}"]
@@ -532,6 +592,7 @@ main() {
     
     # Setup each CLI tool
     setup_opencode_cli
+    setup_claude_code_cli
     setup_claude_p_cli  
     setup_gemini_cli
     

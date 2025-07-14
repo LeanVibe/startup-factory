@@ -87,7 +87,7 @@ fi
 
 # Check CLI fallback tools
 echo "🛠️  Checking CLI fallback tools..."
-cli_tools=("opencode" "claude-p" "gemini")
+cli_tools=("opencode" "claude" "claude-p" "gemini")
 available_clis=0
 
 for tool in "${cli_tools[@]}"; do
