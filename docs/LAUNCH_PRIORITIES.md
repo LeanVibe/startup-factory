@@ -1,6 +1,9 @@
 # Startup Factory - Immediate Launch Priorities
 
 **Status**: Ready for Execution  
+
+**Note:** All orchestration, escalation, and gate protocols are managed by main agent leadership. See CLAUDE.md and docs/transition-log.md for details.
+
 **Timeline**: 24-48 hours to production launch  
 **Confidence**: 90% ready with identified gaps
 
@@ -9,7 +12,7 @@
 ## 🔥 **CRITICAL PATH ITEMS** (Block Launch if Not Complete)
 
 ### **Priority A1: MVP Orchestrator Integration Testing**
-**Owner**: Technical Lead  
+**Owner**: main agent leadership  
 **Estimate**: 4-6 hours  
 **Risk**: High (Unknown failure modes)
 
@@ -29,7 +32,7 @@
 ---
 
 ### **Priority A2: API Integration Validation**
-**Owner**: Technical Lead  
+**Owner**: main agent leadership  
 **Estimate**: 2-3 hours  
 **Risk**: Medium (API rate limits, key validation)
 
@@ -48,7 +51,7 @@
 ---
 
 ### **Priority A3: Production Configuration Setup**
-**Owner**: Technical Lead  
+**Owner**: main agent leadership  
 **Estimate**: 1-2 hours  
 **Risk**: Low (Well-defined requirements)
 
@@ -69,7 +72,7 @@
 ## ⚠️ **HIGH PRIORITY** (Should Complete Before Launch)
 
 ### **Priority B1: Template Quality Validation**
-**Owner**: Technical Lead  
+**Owner**: main agent leadership  
 **Estimate**: 3-4 hours  
 **Risk**: Medium (Quality gate failures)
 
@@ -88,7 +91,7 @@
 ---
 
 ### **Priority B2: Documentation Accuracy Verification**
-**Owner**: Technical Lead  
+**Owner**: main agent leadership  
 **Estimate**: 1-2 hours  
 **Risk**: Low (Mostly complete)
 
@@ -105,7 +108,7 @@
 ---
 
 ### **Priority B3: Error Recovery Testing**
-**Owner**: Technical Lead  
+**Owner**: main agent leadership  
 **Estimate**: 2-3 hours  
 **Risk**: Medium (Complex failure scenarios)
 

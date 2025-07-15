@@ -1,6 +1,9 @@
 # Startup Factory - Detailed Execution Plan
 
 **Target**: Production Launch in 24-48 hours  
+
+**Note:** All orchestration, escalation, and gate protocols are managed by main agent leadership. See CLAUDE.md and docs/transition-log.md for details.
+
 **Current Status**: 85% ready, focusing on critical path execution  
 **Timeline**: Detailed hour-by-hour breakdown
 
@@ -11,6 +14,7 @@
 ### **A1: End-to-End Integration Testing** (4-6 hours)
 
 #### **A1.1: MVP Orchestrator Workflow Testing** (2-3 hours)
+**Owner:** main agent leadership
 **Prerequisites**: Valid API keys for all three providers
 
 **Detailed Steps**:
@@ -77,6 +81,7 @@
 - Project persistence works correctly
 
 #### **A1.2: Template Integration Testing** (1-2 hours)
+**Owner:** main agent leadership
 
 **Detailed Steps**:
 1. **Test Project Generation** (30 min)
@@ -108,6 +113,7 @@
 - Basic API endpoints respond correctly
 
 #### **A1.3: Error Handling Validation** (1 hour)
+**Owner:** main agent leadership
 
 **Detailed Steps**:
 1. **Test API Failure Scenarios** (30 min)
@@ -137,6 +143,7 @@
 ### **A2: API Integration Validation** (2-3 hours)
 
 #### **A2.1: OpenAI Integration** (45 min)
+**Owner:** main agent leadership
 
 **Detailed Steps**:
 1. **Basic Connection Test** (15 min)
@@ -225,6 +232,7 @@
 - Cost tracking includes all requests
 
 #### **A2.4: Integration Stress Testing** (30 min)
+**Owner:** main agent leadership
 
 **Detailed Steps**:
 1. **Concurrent API Calls** (15 min)
