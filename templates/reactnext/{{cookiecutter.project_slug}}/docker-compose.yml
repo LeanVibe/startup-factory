@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "{{cookiecutter.base_port}}:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:{{cookiecutter.api_port}}
+      - NEXTAUTH_URL=http://localhost:{{cookiecutter.base_port}}
+      - NEXTAUTH_SECRET=dev-secret-key-change-in-production
+    depends_on:
+      - backend
+      - postgres
+    networks:
+      - {{cookiecutter.project_slug}}-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "{{cookiecutter.api_port}}:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - DATABASE_URL=postgresql://{{cookiecutter.project_slug}}_user:{{cookiecutter.project_slug}}_pass@postgres:5432/{{cookiecutter.project_slug}}_db
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - CORS_ORIGINS=["http://localhost:{{cookiecutter.base_port}}"]
+      - ENVIRONMENT=development
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - {{cookiecutter.project_slug}}-network
+
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "{{cookiecutter.db_port}}:5432"
+    environment:
+      - POSTGRES_DB={{cookiecutter.project_slug}}_db
+      - POSTGRES_USER={{cookiecutter.project_slug}}_user
+      - POSTGRES_PASSWORD={{cookiecutter.project_slug}}_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {{cookiecutter.project_slug}}_user -d {{cookiecutter.project_slug}}_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - {{cookiecutter.project_slug}}-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "{{cookiecutter.base_port|int + 10}}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - {{cookiecutter.project_slug}}-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  {{cookiecutter.project_slug}}-network:
+    driver: bridge

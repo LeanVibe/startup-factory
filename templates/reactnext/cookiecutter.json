@@ -1,0 +1,40 @@
+{
+    "project_name": "My React Startup",
+    "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '-').replace('_', '-') }}",
+    "description": "AI-powered startup built with React and Next.js",
+    "template_type": "reactnext",
+    "frontend_framework": "nextjs",
+    "backend_framework": "fastapi",
+    "database": "postgresql", 
+    "version": "1.0.0",
+    "author_name": "Startup Founder",
+    "base_port": "3001",
+    "api_port": "8001",
+    "db_port": "5433",
+    "memory_mb": "500",
+    "cpu_cores": "0.5",
+    "storage_gb": "2",
+    "supported_features": [
+        "responsive_design",
+        "typescript_support", 
+        "api_integration",
+        "database_orm",
+        "authentication",
+        "testing_framework",
+        "docker_deployment",
+        "monitoring_setup"
+    ],
+    "_extensions": ["jinja2_time.TimeExtension"],
+    "_copy_without_render": [
+        "*.jpg",
+        "*.jpeg", 
+        "*.png",
+        "*.gif",
+        "*.svg",
+        "*.ico",
+        "*.woff",
+        "*.woff2",
+        "*.ttf",
+        "*.eot"
+    ]
+}
