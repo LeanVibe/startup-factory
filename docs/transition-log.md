@@ -3,7 +3,7 @@
 **Date:** July 15, 2025
 
 ## Summary
-Startup Factory orchestration has transitioned from main agent leadership to main agent leadership. All escalation protocols, provider assignments, and human-in-the-loop gates now reference main agent as the orchestrator.
+Startup Factory orchestration has transitioned from Claude code to main agent leadership. All escalation protocols, provider assignments, and human-in-the-loop gates now reference main agent as the orchestrator.
 
 ## Key Changes
 - Orchestration scripts updated to reflect main agent leadership
@@ -17,3 +17,14 @@ Startup Factory orchestration has transitioned from main agent leadership to mai
 - See FAQ below for common questions
 
 ---
+
+## FAQ
+
+**Q: Who is responsible for orchestration and escalation?**
+A: Main agent leadership is now responsible for all orchestration, escalation, and gate protocols. See CLAUDE.md for details.
+
+**Q: Where do I find updated protocols and contact info?**
+A: Refer to CLAUDE.md and onboarding docs for the latest protocols and escalation contacts.
+
+**Q: What should I do if I find outdated references to Claude code?**
+A: Update them to main agent leadership and notify the team via GitHub Issues.
