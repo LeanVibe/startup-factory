@@ -35,7 +35,7 @@
 
 **Requirements**:
 - [ ] OpenAI GPT-4o integration verified
-- [ ] Anthropic Claude integration verified  
+- [ ] Anthropic integration verified (main agent strategic reasoning)  
 - [ ] Perplexity API integration verified
 - [ ] Error handling for API failures tested
 - [ ] Rate limiting and retry logic validated
@@ -199,7 +199,7 @@
 ### **Contingency Plans**
 - **Emergency Rollback**: Previous stable version available
 - **Manual Workflows**: Documented manual processes for critical failures
-- **Support Escalation**: Clear escalation paths for user issues
+- **Support Escalation (main agent leadership)**: Clear escalation paths for user issues
 - **Monitoring**: Real-time alerting for critical issues
 
 ---
@@ -223,4 +223,4 @@
 
 **Next Review**: After Priority A completion  
 **Launch Decision**: Technical Lead + Human oversight  
-**Emergency Contact**: Claude Code Assistant for technical escalation
+**Emergency Contact: main agent leadership**: Claude Code Assistant for technical escalation

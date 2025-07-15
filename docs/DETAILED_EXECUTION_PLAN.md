@@ -183,7 +183,7 @@
    ```python
    async def test_anthropic():
        # Similar test structure for Anthropic
-       # Test Claude-3.5-sonnet model specifically
+       # Test main agent strategic reasoning model specifically
        # Validate response format and quality
    ```
 
@@ -195,7 +195,7 @@
    ```
 
 **Success Criteria**:
-- Claude responses are high quality
+- Main agent strategic reasoning responses are high quality
 - Complex prompts handled correctly
 - Token usage tracking accurate
 - Model selection working properly

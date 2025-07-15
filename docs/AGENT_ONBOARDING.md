@@ -72,7 +72,7 @@ startup-factory/
 
 ### AI Provider Integration
 - **OpenAI**: Code generation (GPT-4o) with cost tracking
-- **Anthropic**: Strategic planning and architecture (Claude)
+- **Anthropic**: Strategic planning and architecture (main agent leadership)
 - **OpenCode CLI**: Local code generation and optimization
 - **Perplexity**: Market research and competitive analysis
 

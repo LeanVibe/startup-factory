@@ -3,7 +3,7 @@
 **Date:** July 15, 2025
 
 ## Summary
-Startup Factory orchestration has transitioned from Claude code to main agent leadership. All escalation protocols, provider assignments, and human-in-the-loop gates now reference main agent as the orchestrator.
+Startup Factory orchestration has transitioned from main agent leadership to main agent leadership. All escalation protocols, provider assignments, and human-in-the-loop gates now reference main agent as the orchestrator.
 
 ## Key Changes
 - Orchestration scripts updated to reflect main agent leadership

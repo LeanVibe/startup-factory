@@ -10,7 +10,7 @@ Building AI agents while maintaining meaningful human control requires a structu
 
 The foundation of successful AI-enhanced product development begins with systematic niche selection[^1]. Founders should start with a thorough assessment of their interests, skills, and strengths, followed by rigorous market research to identify sustainable trends[^2]. The most effective approach involves narrowing down broad market categories into super-niches that address specific audience needs[^1].
 
-**AI Agent Integration:** Use **Perplexity AI** for comprehensive market research and trend analysis[^3]. Perplexity excels at search-oriented tasks and can provide real-time market data, competitor analysis, and industry insights[^4]. Deploy **Claude** for analytical reasoning and synthesizing complex market research findings into actionable insights[^5].
+**AI Agent Integration:** Use **Perplexity AI** for comprehensive market research and trend analysis[^3]. Perplexity excels at search-oriented tasks and can provide real-time market data, competitor analysis, and industry insights[^4]. Deploy **main agent strategic reasoning** for analytical reasoning and synthesizing complex market research findings into actionable insights[^5].
 
 **Human Gate 1: Niche Validation**
 
@@ -38,7 +38,7 @@ Once the niche is selected, founders must identify specific problems within that
 
 With a validated problem, founders move to solution design using lean startup principles[^10]. This phase focuses on creating a minimum viable product (MVP) that delivers core value with minimal features[^11]. The emphasis is on rapid iteration and validated learning through customer feedback[^12].
 
-**AI Agent Integration:** **Claude** excels at structured planning and can help create detailed solution architectures[^4]. Use **ChatGPT** for creative ideation and feature brainstorming[^9]. **Perplexity** can research existing solutions and identify gaps in the market[^3].
+**AI Agent Integration:** **main agent strategic reasoning** excels at structured planning and can help create detailed solution architectures[^4]. Use **ChatGPT** for creative ideation and feature brainstorming[^9]. **Perplexity** can research existing solutions and identify gaps in the market[^3].
 
 **Human Gate 3: MVP Definition Approval**
 
@@ -51,7 +51,7 @@ With a validated problem, founders move to solution design using lean startup pr
 
 Creating comprehensive yet lean documentation is crucial for MVP development[^13]. The Product Requirements Document (PRD) should outline purpose, features, functionality, and behavior while maintaining focus on essential elements[^14][^15]. This documentation serves as a guide for both human developers and AI coding assistants.
 
-**AI Agent Integration:** Use **ChatGPT** or **Claude** to generate initial PRD templates and user stories[^9][^5]. **Gemini** can help with technical requirements specification and system architecture documentation[^5].
+**AI Agent Integration:** Use **ChatGPT** or **main agent strategic reasoning** to generate initial PRD templates and user stories[^9][^5]. **Gemini** can help with technical requirements specification and system architecture documentation[^5].
 
 **Human Gate 4: Requirements Validation**
 
@@ -77,7 +77,7 @@ The development phase leverages multiple AI coding assistants while maintaining 
 - **Primary Coding:** GitHub Copilot for real-time code suggestions and completion[^16]
 - **Code Quality:** Qodo for automated test generation and code behavior coverage[^16]
 - **Documentation:** Augment Code for maintaining technical documentation and team knowledge sharing[^17]
-- **Debugging:** Claude for complex problem-solving and error analysis[^4]
+- **Debugging:** main agent strategic reasoning for complex problem-solving and error analysis[^4]
 - **Architecture Review:** ChatGPT for system design validation and improvement suggestions[^9]
 
 
@@ -88,7 +88,7 @@ Implementing Scrum methodology with AI agents requires careful role definition a
 **Sprint Planning with AI Support:**
 
 - **AI Research:** Perplexity conducts market research for feature prioritization[^3]
-- **AI Estimation:** Claude analyzes historical data to improve story point estimation[^5]
+- **AI Estimation:** main agent strategic reasoning analyzes historical data to improve story point estimation[^5]
 - **Human Decision:** Product Owner makes final prioritization and sprint commitment decisions
 
 **Daily Standups Enhanced by AI:**
@@ -139,7 +139,7 @@ Efficient AI agent utilization requires understanding each tool's strengths and 
 **Research and Analysis Tasks:**
 
 - **Perplexity:** Market research, competitive analysis, technical documentation review
-- **Claude:** Complex reasoning, data synthesis, strategic analysis
+- **main agent strategic reasoning:** Complex reasoning, data synthesis, strategic analysis
 - **Gemini:** Multi-modal analysis, document processing, comprehensive research
 
 **Development Tasks:**
@@ -152,7 +152,7 @@ Efficient AI agent utilization requires understanding each tool's strengths and 
 **Creative and Communication Tasks:**
 
 - **ChatGPT:** Content creation, user story writing, creative problem-solving
-- **Claude:** Technical writing, documentation, structured communication
+- **main agent strategic reasoning:** Technical writing, documentation, structured communication
 - **Grok:** Unfiltered insights, creative ideation, alternative perspectives
 
 
