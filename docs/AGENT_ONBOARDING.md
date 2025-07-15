@@ -2,6 +2,13 @@
 
 **Purpose**: Enable new agents to quickly understand the project and start contributing immediately.
 
+## 📝 Onboarding Checklist
+1. Read CLAUDE.md and README.md for architecture and process overview
+2. Clone the repository and set up your environment (see Setup Commands below)
+3. Review open issues and worktree branches for available tasks
+4. For orchestration, escalation, and quality gates, reference main agent leadership protocols
+5. If you encounter blockers or complex decisions, escalate to main agent leadership as described in docs/transition-log.md
+
 ## 🎯 Project Overview
 
 **Startup Factory** is a production-ready AI-orchestrated development platform for rapidly building and deploying multiple MVPs simultaneously. The platform combines strategic human oversight with AI automation to accelerate startup development while maintaining quality and strategic control.
@@ -72,7 +79,7 @@ startup-factory/
 
 ### AI Provider Integration
 - **OpenAI**: Code generation (GPT-4o) with cost tracking
-- **Anthropic**: Strategic planning and architecture (main agent leadership)
+- **Anthropic (via main agent leadership)**: Strategic planning, architecture, quality gates, and deployment
 - **OpenCode CLI**: Local code generation and optimization
 - **Perplexity**: Market research and competitive analysis
 
@@ -159,24 +166,26 @@ AI_PROVIDER_USAGE = {
 
 ## 🚨 Human-in-the-Loop Gates
 
+All gates and escalation protocols are managed by main agent leadership. For any gate decision, follow the protocols in CLAUDE.md and docs/transition-log.md.
+
 ### Gate 0: Niche Validation
 - **Trigger**: Market research completion
-- **Decision**: Niche selection approval
+- **Decision**: Niche selection approval (main agent leadership)
 - **Criteria**: Market size, founder-market fit, competitive landscape
 
 ### Gate 1: Problem-Solution Fit
 - **Trigger**: Problem identification and solution design
-- **Decision**: Go/no-go on problem pursuit
+- **Decision**: Go/no-go on problem pursuit (main agent leadership)
 - **Criteria**: Problem validation, solution feasibility, customer demand
 
 ### Gate 2: Architecture Review
 - **Trigger**: Technical architecture completion
-- **Decision**: Architecture approval and implementation approach
+- **Decision**: Architecture approval and implementation approach (main agent leadership)
 - **Criteria**: Scalability, security, performance considerations
 
 ### Gate 3: Release Readiness
 - **Trigger**: Sprint completion or release candidate
-- **Decision**: Release approval
+- **Decision**: Release approval (main agent leadership)
 - **Criteria**: Quality metrics, testing completion, deployment readiness
 
 ## 🔄 Development Workflow
@@ -250,7 +259,7 @@ python tools/monitoring_dashboard.py
 - **Documentation**: `docs/` directory with comprehensive guides
 - **GitHub Issues**: Open issues for bugs and feature requests
 - **Code Review**: All changes require peer review
-- **Human Gates**: Escalate complex decisions to human oversight
+- **Human Gates**: Escalate complex decisions to main agent leadership as described in docs/transition-log.md
 
 ## 🔮 Next Development Phase
 

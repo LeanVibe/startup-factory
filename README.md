@@ -20,10 +20,10 @@ Idea → Research → Validation → MVP Spec → Code → Test → Deploy → I
         AI research   Human Gates   Production
 
 Phase	Lead AI Tools	Key Human Gate	Output Artifact
-Market/Problem research	Perplexity, Grok	G0 – Niche validation	Market & competitor reports
-Solution & MVP design	Claude, ChatGPT	G1 – Problem‑solution fit	MVP spec + architecture
-Build & test	Claude‑Code, Codex‑CLI, Gemini‑CLI	G2 – Feature completion	Running code + tests
-Release & learn	CI/CD bots + dashboards	G3 – Release readiness	Production deploy & metrics
+Market/Problem research	Perplexity	G0 – Niche validation	Market & competitor reports
+Solution & MVP design	Main agent leadership (Anthropic, OpenAI)	G1 – Problem‑solution fit	MVP spec + architecture
+Build & test	Main agent leadership (OpenAI, Gemini, Codex)	G2 – Feature completion	Running code + tests
+Release & learn	Main agent orchestrator + CI/CD bots	G3 – Release readiness	Production deploy & metrics
 
 (The autonomy model behind these gates is detailed in §7.)  ￼
 
@@ -77,18 +77,22 @@ LLM agents call these to drop in idiomatic scaffolds with tests, avoiding token�
 
 The mvp‑orchestrator.py script polls /issues/*.yaml and assigns tasks:
 
-TASK_MAP = {
-    "research": "perplexity",
-    "planning": "claude",
-    "architecture": "claude-code",
-    "backend": "gemini-cli",
-    "frontend": "codex-cli",
-    "ios": "gemini-cli",
-    "testing": "qodo",
+AI_PROVIDER_USAGE = {
+    "market_research": "perplexity",
+    "founder_analysis": "anthropic",
+    "mvp_specification": "anthropic",
+    "architecture": "anthropic",
+    "code_generation": "openai",
+    "quality_checks": "anthropic",
+    "deployment": "anthropic",
 }
+# Future roadmap includes:
+# - gemini-cli integration for backend development
+# - codex-cli integration for frontend development
+# - qodo integration for test generation
 
 Workflow:
-	1.	Reads context (docs/ + last diff), spins the proper agent Docker image.
+	1.	Reads context (docs/ + last diff), spins the proper agent Docker image as directed by the main agent orchestrator.
 	2.	Creates/updates a worktree branch.
 	3.	Opens a draft PR tagged ai-generated.
 	4.	Adds cost/time metadata; shuts down if >20 k tokens or >15 min.

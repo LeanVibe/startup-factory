@@ -1,6 +1,9 @@
 # Startup Factory Development Plan
 
 **Status**: 🎉 **PRODUCTION READY - All Tracks Complete**  
+
+**Note:** All orchestration, escalation, and gate protocols are managed by main agent leadership. See CLAUDE.md and docs/transition-log.md for details.
+
 **Created**: July 5, 2025  
 **Updated**: July 15, 2025  
 **Target**: ✅ **ACHIEVED - Full Platform Deployment Ready**  

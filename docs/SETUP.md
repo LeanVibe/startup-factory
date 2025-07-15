@@ -2,6 +2,8 @@
 
 This guide will help you set up the Startup Factory AI orchestration platform for launching multiple startups simultaneously.
 
+**Note:** All orchestration, escalation, and gate protocols are managed by main agent leadership. See CLAUDE.md and docs/transition-log.md for details.
+
 ## Prerequisites
 
 - Python 3.11 or higher
