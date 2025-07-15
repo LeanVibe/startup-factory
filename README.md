@@ -2,6 +2,8 @@ Startup‑Factory Handbook
 
 Fast onboarding guide for AI‑accelerated MVP production with FastAPI + LitPWA (and optional SwiftUI)
 
+**Transition Notice (July 2025):** Main agent leadership has replaced Claude code as the orchestrator. All escalation protocols, provider assignments, and human-in-the-loop gates now reference main agent as the orchestrator. See the transition log and FAQ for details.
+
 ⸻
 
 0. Purpose & Audience

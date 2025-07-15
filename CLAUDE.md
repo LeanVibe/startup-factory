@@ -1,6 +1,8 @@
 # CLAUDE.md - Startup Factory Development Guide
 
-This file provides guidance to Claude Code when working with the Startup Factory codebase - an AI-accelerated MVP development platform for rapidly building and deploying multiple startups.
+This file provides guidance to the main agent (formerly Claude Code) when working with the Startup Factory codebase - an AI-accelerated MVP development platform for rapidly building and deploying multiple startups.
+
+**Transition Notice:** As of July 2025, main agent leadership has replaced Claude code as the orchestrator. All escalation protocols, provider assignments, and human-in-the-loop gates now reference main agent as the orchestrator. See the transition log and FAQ for details.
 
 ## Project Overview
 
