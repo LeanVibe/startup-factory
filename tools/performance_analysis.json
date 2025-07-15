@@ -1,0 +1,166 @@
+{
+  "report_timestamp": "2025-07-15T09:58:08.997039",
+  "system_info": {
+    "platform": "darwin",
+    "python_version": "3.12.11 (main, Jul  1 2025, 18:16:32) [Clang 20.1.4 ]",
+    "cpu_count": 16,
+    "memory_gb": 48.0
+  },
+  "current_performance": {
+    "baseline": {
+      "timestamp": "2025-07-15 09:58:09.102439",
+      "memory_mb": 24959.40625,
+      "cpu_percent": 8.9,
+      "disk_io_mb": 12197.2109375,
+      "network_io_mb": 471.6953125,
+      "process_count": 776
+    },
+    "components": {
+      "mvp_orchestrator_load": 0.014158248901367188,
+      "api_response_times": {
+        "openai": 0.505073070526123,
+        "anthropic": 0.7050449848175049,
+        "perplexity": 0.3012099266052246
+      },
+      "template_processing": {
+        "neoforge": 2.0052099227905273
+      },
+      "project_generation": {
+        "full_generation": 5.004116773605347
+      },
+      "memory_analysis": {
+        "current_process": 29.046875,
+        "python_memory": 54.0,
+        "memory_growth": 0.0
+      }
+    },
+    "bottlenecks": [],
+    "recommendations": [
+      "Implement API response caching to reduce redundant calls",
+      "Add parallel API calls for independent operations",
+      "Implement API rate limiting and retry logic",
+      "Implement memory pooling for startup instances",
+      "Add garbage collection optimization",
+      "Use lightweight data structures for metadata",
+      "Implement process isolation for concurrent startups",
+      "Add resource allocation and monitoring",
+      "Implement dynamic scaling based on load",
+      "Pre-compile templates to reduce generation time",
+      "Cache template processing results",
+      "Implement incremental template updates"
+    ],
+    "performance_targets": {
+      "startup_creation_time": {
+        "current": "45-60 minutes",
+        "target": "<30 minutes"
+      },
+      "memory_per_startup": {
+        "current": "~800MB",
+        "target": "<500MB"
+      },
+      "cpu_per_startup": {
+        "current": "~40%",
+        "target": "<25%"
+      },
+      "concurrent_startups": {
+        "current": "1-2",
+        "target": "5"
+      }
+    }
+  },
+  "concurrent_benchmark": {
+    "num_startups": 5,
+    "start_time": "2025-07-15T09:58:18.643107",
+    "startups": {
+      "startup_1": {
+        "status": "success",
+        "duration": 6.11867880821228,
+        "memory_used": 25232.828125
+      },
+      "startup_2": {
+        "status": "success",
+        "duration": 6.1121509075164795,
+        "memory_used": 25046.84375
+      },
+      "startup_3": {
+        "status": "success",
+        "duration": 6.120428085327148,
+        "memory_used": 25433.90625
+      },
+      "startup_4": {
+        "status": "success",
+        "duration": 6.110222101211548,
+        "memory_used": 25209.109375
+      },
+      "startup_5": {
+        "status": "success",
+        "duration": 6.111492872238159,
+        "memory_used": 25073.140625
+      }
+    },
+    "resource_usage": [
+      {
+        "timestamp": "2025-07-15 09:58:18.748450",
+        "memory_mb": 25232.828125,
+        "cpu_percent": 5.9,
+        "disk_io_mb": 12197.2109375,
+        "network_io_mb": 471.90234375,
+        "process_count": 776
+      },
+      {
+        "timestamp": "2025-07-15 09:58:24.867285",
+        "memory_mb": 25046.84375,
+        "cpu_percent": 13.3,
+        "disk_io_mb": 12197.2109375,
+        "network_io_mb": 472.447265625,
+        "process_count": 776
+      },
+      {
+        "timestamp": "2025-07-15 09:58:30.978921",
+        "memory_mb": 25433.90625,
+        "cpu_percent": 10.8,
+        "disk_io_mb": 12197.2109375,
+        "network_io_mb": 472.705078125,
+        "process_count": 777
+      },
+      {
+        "timestamp": "2025-07-15 09:58:37.095760",
+        "memory_mb": 25209.109375,
+        "cpu_percent": 8.5,
+        "disk_io_mb": 12197.2109375,
+        "network_io_mb": 473.1494140625,
+        "process_count": 777
+      },
+      {
+        "timestamp": "2025-07-15 09:58:43.209757",
+        "memory_mb": 25073.140625,
+        "cpu_percent": 10.8,
+        "disk_io_mb": 12197.2109375,
+        "network_io_mb": 473.2490234375,
+        "process_count": 776
+      }
+    ],
+    "conflicts": [],
+    "success_rate": 1.0,
+    "total_time": 30.573083877563477,
+    "end_time": "2025-07-15T09:58:49.216204"
+  },
+  "resource_conflicts": {
+    "port_conflicts": [
+      "Port 5000 is already in use"
+    ],
+    "file_conflicts": [],
+    "database_conflicts": [],
+    "memory_conflicts": [],
+    "recommendations": [
+      "Implement dynamic port allocation"
+    ]
+  },
+  "optimization_priority": [
+    "1. Implement API response caching (30-50% time reduction)",
+    "2. Add parallel processing for independent operations (40-60% time reduction)",
+    "3. Implement resource pooling for concurrent startups (memory efficiency)",
+    "4. Add dynamic port allocation (prevent conflicts)",
+    "5. Optimize template processing (20-30% time reduction)"
+  ]
+}
