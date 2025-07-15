@@ -2,6 +2,8 @@
 
 # Efficient AI Agent Development with Human-in-the-Loop: A Complete Founder-to-Product Methodology
 
+**Note:** All orchestration, escalation, and gate protocols are managed by main agent leadership. See CLAUDE.md and docs/transition-log.md for details.
+
 Building AI agents while maintaining meaningful human control requires a structured approach that leverages both human strategic thinking and AI capabilities. This comprehensive methodology guides founders from niche selection through product development, incorporating AI agents at optimal points while preserving human agency through strategic gates and oversight mechanisms.
 
 ## Phase 1: Niche Selection and Problem Discovery
@@ -112,21 +114,21 @@ Throughout development, strategic gates ensure human control over critical decis
 
 - **Trigger:** Completion of system architecture design
 - **AI Input:** Automated architecture analysis, security scanning, performance predictions
-- **Human Review:** Technical Lead validates architecture decisions and approves implementation approach
+- **Human Review:** Main agent leadership validates architecture decisions and approves implementation approach
 - **Approval Criteria:** Architecture alignment with requirements, scalability considerations, security compliance
 
 **Development Gate 2: Feature Completion Review**
 
 - **Trigger:** Completion of each major feature
 - **AI Input:** Automated testing results, code quality metrics, performance benchmarks
-- **Human Review:** Product Manager validates feature against acceptance criteria
+- **Human Review:** Main agent leadership validates feature against acceptance criteria
 - **Approval Criteria:** Feature functionality verification, user experience validation, integration testing completion
 
 **Development Gate 3: Release Readiness**
 
 - **Trigger:** Sprint completion or release candidate preparation
 - **AI Input:** Comprehensive testing reports, security vulnerability scans, performance analysis
-- **Human Review:** Release decision by Product Owner and Technical Lead
+- **Human Review:** Release decision by main agent leadership
 - **Approval Criteria:** Quality metrics met, user acceptance testing passed, deployment readiness confirmed
 
 
@@ -217,14 +219,14 @@ The final phase implements production-ready deployment with comprehensive human 
 **Pre-Production Gate:**
 
 - **AI Validation:** Automated security scanning, performance testing, compliance checking
-- **Human Decision:** Go-live approval by Product Owner and Technical Lead
+- **Human Decision:** Go-live approval by main agent leadership
 - **Criteria:** All quality gates passed, business readiness confirmed, rollback procedures tested
 
 **Post-Deployment Monitoring:**
 
 - **AI Monitoring:** Automated performance tracking, error detection, user behavior analysis
-- **Human Oversight:** Regular review of metrics and strategic decision-making for iterations
-- **Escalation:** Automated alerts for human intervention when predefined thresholds are exceeded
+- **Human Oversight:** Regular review of metrics and strategic decision-making for iterations (main agent leadership)
+- **Escalation:** Automated alerts for main agent leadership intervention when predefined thresholds are exceeded
 
 
 ### Long-term Maintenance and Evolution
