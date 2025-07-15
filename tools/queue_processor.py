@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #!/usr/bin/env python3
 """
 QueueProcessor - Parallel task processing with AI coordination

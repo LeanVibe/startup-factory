@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #!/usr/bin/env python3
 """
 Core Types and Data Classes for Multi-Startup Infrastructure
