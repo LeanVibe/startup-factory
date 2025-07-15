@@ -7,16 +7,29 @@ Integrates StartupManager, ResourceAllocator, and QueueProcessor for concurrent 
 import asyncio
 import json
 import logging
+import yaml
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
-from .core_types import (
-    StartupConfig, StartupInstance, StartupStatus, Task, TaskType, TaskPriority,
-    generate_task_id, validate_startup_config
-)
-from .startup_manager import StartupManager
-from .queue_processor import QueueProcessor
+try:
+    # Try relative imports first (package mode)
+    from .core_types import (
+        StartupConfig, StartupInstance, StartupStatus, Task, TaskType, TaskPriority,
+        generate_task_id, validate_startup_config,
+        StartupFactoryError, InvalidConfigError, ConcurrencyLimitError, InsufficientResourcesError
+    )
+    from .startup_manager import StartupManager
+    from .queue_processor import QueueProcessor
+except ImportError:
+    # Fall back to absolute imports (script mode)
+    from core_types import (
+        StartupConfig, StartupInstance, StartupStatus, Task, TaskType, TaskPriority,
+        generate_task_id, validate_startup_config,
+        StartupFactoryError, InvalidConfigError, ConcurrencyLimitError, InsufficientResourcesError
+    )
+    from startup_manager import StartupManager
+    from queue_processor import QueueProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -75,8 +88,14 @@ class MultiStartupOrchestrator:
             else:
                 logger.warning(f"Config file {self.config_path} not found, using defaults")
                 return {}
+        except (IOError, OSError) as e:
+            logger.error(f"Failed to load config - I/O error: {e}")
+            return {}
+        except yaml.YAMLError as e:
+            logger.error(f"Failed to parse YAML config: {e}")
+            return {}
         except Exception as e:
-            logger.error(f"Failed to load config: {e}")
+            logger.error(f"Unexpected error loading config: {e}")
             return {}
     
     async def initialize(self) -> None:
@@ -146,9 +165,12 @@ class MultiStartupOrchestrator:
             
             return startup_id
             
-        except Exception as e:
-            logger.error(f"Failed to create startup: {e}")
+        except (InvalidConfigError, ConcurrencyLimitError, InsufficientResourcesError) as e:
+            logger.error(f"Failed to create startup - validation error: {e}")
             raise
+        except Exception as e:
+            logger.error(f"Unexpected error creating startup: {e}")
+            raise StartupFactoryError(f"Failed to create startup: {e}")
     
     async def create_multiple_startups(self, startup_configs: List[dict]) -> List[str]:
         """

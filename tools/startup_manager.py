@@ -11,14 +11,26 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
-from .core_types import (
-    IStartupManager, IResourceAllocator,
-    StartupConfig, StartupInstance, StartupStatus, ResourceAllocation,
-    InvalidConfigError, ConcurrencyLimitError, StartupNotFoundError,
-    generate_startup_id, validate_startup_config
-)
-from .resource_allocator import ResourceAllocator
-from .state_manager import StateManager
+try:
+    # Try relative imports first (package mode)
+    from .core_types import (
+        IStartupManager, IResourceAllocator,
+        StartupConfig, StartupInstance, StartupStatus, ResourceAllocation,
+        InvalidConfigError, ConcurrencyLimitError, StartupNotFoundError,
+        generate_startup_id, validate_startup_config
+    )
+    from .resource_allocator import ResourceAllocator
+    from .state_manager import StateManager
+except ImportError:
+    # Fall back to absolute imports (script mode)
+    from core_types import (
+        IStartupManager, IResourceAllocator,
+        StartupConfig, StartupInstance, StartupStatus, ResourceAllocation,
+        InvalidConfigError, ConcurrencyLimitError, StartupNotFoundError,
+        generate_startup_id, validate_startup_config
+    )
+    from resource_allocator import ResourceAllocator
+    from state_manager import StateManager
 
 
 logger = logging.getLogger(__name__)

@@ -10,10 +10,18 @@ import psutil
 from datetime import datetime
 from typing import Dict, List, Optional, Set
 
-from .core_types import (
-    IResourceAllocator, ResourceAllocation, APIQuota,
-    InsufficientMemoryError, PortConflictError, InsufficientResourcesError
-)
+try:
+    # Try relative imports first (package mode)
+    from .core_types import (
+        IResourceAllocator, ResourceAllocation, APIQuota,
+        InsufficientMemoryError, PortConflictError, InsufficientResourcesError
+    )
+except ImportError:
+    # Fall back to absolute imports (script mode)
+    from core_types import (
+        IResourceAllocator, ResourceAllocation, APIQuota,
+        InsufficientMemoryError, PortConflictError, InsufficientResourcesError
+    )
 
 
 logger = logging.getLogger(__name__)

@@ -11,10 +11,18 @@ from datetime import datetime
 from typing import Dict, List, Optional, Set
 from collections import defaultdict
 
-from .core_types import (
-    IQueueProcessor, Task, TaskResult, PrioritizedTask, TaskType, TaskPriority, TaskStatus,
-    generate_task_id, validate_task, TaskNotFoundError, ProviderError
-)
+try:
+    # Try relative imports first (package mode)
+    from .core_types import (
+        IQueueProcessor, Task, TaskResult, PrioritizedTask, TaskType, TaskPriority, TaskStatus,
+        generate_task_id, validate_task, TaskNotFoundError, ProviderError
+    )
+except ImportError:
+    # Fall back to absolute imports (script mode)
+    from core_types import (
+        IQueueProcessor, Task, TaskResult, PrioritizedTask, TaskType, TaskPriority, TaskStatus,
+        generate_task_id, validate_task, TaskNotFoundError, ProviderError
+    )
 
 logger = logging.getLogger(__name__)
 

@@ -7,11 +7,23 @@ Handles startup state persistence, recovery, and consistency across sessions.
 import asyncio
 import json
 import logging
+import aiofiles
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
 
-from .core_types import StartupInstance, StartupConfig, StartupStatus, ResourceAllocation, APIQuota
+try:
+    # Try relative imports first (package mode)
+    from .core_types import (
+        StartupInstance, StartupConfig, StartupStatus, ResourceAllocation, APIQuota,
+        StartupFactoryError, InvalidConfigError, InsufficientResourcesError
+    )
+except ImportError:
+    # Fall back to absolute imports (script mode)
+    from core_types import (
+        StartupInstance, StartupConfig, StartupStatus, ResourceAllocation, APIQuota,
+        StartupFactoryError, InvalidConfigError, InsufficientResourcesError
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -57,21 +69,35 @@ class StateManager:
                 state_file = self.state_dir / f"{startup_id}.json"
                 temp_file = self.state_dir / f"{startup_id}.json.tmp"
                 
-                with open(temp_file, 'w') as f:
-                    json.dump(state_data, f, indent=2, default=str)
+                async with aiofiles.open(temp_file, 'w') as f:
+                    await f.write(json.dumps(state_data, indent=2, default=str))
                 
                 # Atomic rename
                 temp_file.rename(state_file)
                 
                 logger.debug(f"Saved state for startup {startup_id}")
                 
-            except Exception as e:
-                logger.error(f"Failed to save state for {startup_id}: {e}")
+            except (IOError, OSError) as e:
+                logger.error(f"Failed to save state for {startup_id} - I/O error: {e}")
                 # Clean up temp file if it exists
                 temp_file = self.state_dir / f"{startup_id}.json.tmp"
                 if temp_file.exists():
                     temp_file.unlink()
-                raise
+                raise InsufficientResourcesError(f"Failed to save state due to I/O error: {e}")
+            except json.JSONEncodeError as e:
+                logger.error(f"Failed to serialize state for {startup_id}: {e}")
+                # Clean up temp file if it exists
+                temp_file = self.state_dir / f"{startup_id}.json.tmp"
+                if temp_file.exists():
+                    temp_file.unlink()
+                raise InvalidConfigError(f"Failed to serialize state: {e}")
+            except Exception as e:
+                logger.error(f"Unexpected error saving state for {startup_id}: {e}")
+                # Clean up temp file if it exists
+                temp_file = self.state_dir / f"{startup_id}.json.tmp"
+                if temp_file.exists():
+                    temp_file.unlink()
+                raise StartupFactoryError(f"Unexpected error saving state: {e}")
     
     async def load_startup_state(self, startup_id: str) -> Optional[StartupInstance]:
         """
@@ -90,8 +116,9 @@ class StateManager:
                 if not state_file.exists():
                     return None
                 
-                with open(state_file, 'r') as f:
-                    state_data = json.load(f)
+                async with aiofiles.open(state_file, 'r') as f:
+                    content = await f.read()
+                    state_data = json.loads(content)
                 
                 # Deserialize instance from dict
                 instance = self._deserialize_instance(state_data)
@@ -99,8 +126,17 @@ class StateManager:
                 logger.debug(f"Loaded state for startup {startup_id}")
                 return instance
                 
+            except (IOError, OSError) as e:
+                logger.error(f"Failed to load state for {startup_id} - I/O error: {e}")
+                return None
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse state file for {startup_id}: {e}")
+                return None
+            except (KeyError, ValueError) as e:
+                logger.error(f"Invalid state data for {startup_id}: {e}")
+                return None
             except Exception as e:
-                logger.error(f"Failed to load state for {startup_id}: {e}")
+                logger.error(f"Unexpected error loading state for {startup_id}: {e}")
                 return None
     
     async def delete_startup_state(self, startup_id: str) -> None:
