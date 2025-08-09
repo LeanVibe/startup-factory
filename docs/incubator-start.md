@@ -212,7 +212,7 @@ jobs:
                                                                                                       Branch name pattern: feat/*
                                                                                                       Required PR reviewers: 1
 
-                                                                                                      Each AI agent will therefore open a PR from its worktree branch (feat/backend/claude-code/###) that must pass CI before merge.
+                                                                                                      Each AI agent will therefore open a PR from its worktree branch (feat/backend/main-agent/###) that must pass CI before merge.
 
                                                                                                       ⸻
 

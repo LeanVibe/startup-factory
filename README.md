@@ -45,7 +45,7 @@ startup-factory/
     └── starter_ai_recipes/   # Scaffold helpers (see §3)
 
 	•	Default branch main (protected, fast‑forward merges only).
-	•	Agent branches feat/<area>/<agent>/<issue‑id> (e.g., feat/backend/claude-code/102).
+	•	Agent branches feat/<area>/<agent>/<issue‑id> (e.g., feat/backend/main-agent/102).
 	•	Parallel development via git worktree add ../wt‑<area>-<agent> so each LLM container has an isolated file system but shares the repo object store.  ￼
 
 ⸻
