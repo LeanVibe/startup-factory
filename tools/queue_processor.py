@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 #!/usr/bin/env python3
 """
 QueueProcessor - Parallel task processing with AI coordination
@@ -139,6 +138,20 @@ class LoadBalancer:
             if stats['total_requests'] > 0:
                 stats['error_rate'] = 1.0 - (stats['success_count'] / stats['total_requests'])
     
+    async def record_success(self, provider: str, response_time: float, cost: float) -> None:
+        """Record a successful operation"""
+        await self.record_request_end(provider, True, cost, response_time)
+    
+    async def record_failure(self, provider: str, error_message: str) -> None:
+        """Record a failed operation"""
+        async with self._lock:
+            stats = self.provider_stats[provider]
+            stats['total_requests'] += 1
+            stats['last_error'] = error_message
+            # Update error rate
+            if stats['total_requests'] > 0:
+                stats['error_rate'] = 1.0 - (stats['success_count'] / stats['total_requests'])
+    
     async def get_provider_stats(self) -> Dict[str, dict]:
         """Get current provider statistics"""
         return dict(self.provider_stats)
@@ -148,8 +161,11 @@ class ProviderCoordinator:
     """Coordinates with a specific AI provider"""
     
     def __init__(self, provider: str):
+        self.provider_name = provider
         self.provider = provider
         self.active_requests: Set[str] = set()
+        self.active_tasks = 0
+        self.max_concurrent = 10  # Default limit
         self._lock = asyncio.Lock()
     
     async def execute_task(self, task: Task) -> TaskResult:
@@ -204,6 +220,20 @@ class ProviderCoordinator:
         finally:
             async with self._lock:
                 self.active_requests.discard(task.id)
+    
+    async def acquire_slot(self) -> bool:
+        """Acquire a processing slot"""
+        async with self._lock:
+            if self.active_tasks < self.max_concurrent:
+                self.active_tasks += 1
+                return True
+            return False
+    
+    async def release_slot(self) -> None:
+        """Release a processing slot"""
+        async with self._lock:
+            if self.active_tasks > 0:
+                self.active_tasks -= 1
     
     async def _call_provider(self, task: Task) -> dict:
         """
