@@ -2,8 +2,16 @@
 
 **Date:** July 15, 2025
 
-## Summary
+**Summary:**
 Startup Factory orchestration has transitioned from Claude code to main agent leadership. All escalation protocols, provider assignments, and human-in-the-loop gates now reference main agent as the orchestrator.
+
+**Escalation & Contact Info:**
+- For orchestration, escalation, and gate protocols, contact main agent leadership (see CLAUDE.md for details).
+- If you find outdated references, update them and notify the team via GitHub Issues.
+
+**Technical/Documentation Debt Audit:**
+- All contributors should periodically audit for technical and documentation debt, especially before major releases.
+- See TODO.md and PLAN.md for audit checklist.
 
 ## Key Changes
 - Orchestration scripts updated to reflect main agent leadership

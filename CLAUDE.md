@@ -1,6 +1,16 @@
-# CLAUDE.md - Startup Factory Development Guide
+# CLAUDE.md
 
-This file provides guidance to the main agent (formerly Claude Code) when working with the Startup Factory codebase - an AI-accelerated MVP development platform for rapidly building and deploying multiple startups.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+# Startup Factory Development Guide
+
+**Summary:**
+Startup Factory orchestration and leadership is now managed by main agent leadership. All escalation protocols, provider assignments, and human-in-the-loop gates reference main agent as the orchestrator. For escalation and contact info, see this file and docs/transition-log.md.
+
+**Technical/Documentation Debt Audit:**
+- All contributors should periodically audit for technical and documentation debt, especially before major releases. See TODO.md and PLAN.md for audit checklist.
+
+This file provides guidance to Claude Code when working with the Startup Factory codebase - an AI-accelerated MVP development platform for rapidly building and deploying multiple startups.
 
 **Transition Notice:** As of July 2025, main agent leadership has replaced Claude code as the orchestrator. All escalation protocols, provider assignments, and human-in-the-loop gates now reference main agent as the orchestrator. See the transition log and FAQ for details.
 
@@ -16,25 +26,55 @@ This file provides guidance to the main agent (formerly Claude Code) when workin
 
 ## Architecture Overview
 
-### Multi-Startup Monorepo Structure (Current)
+### Multi-Startup Monorepo Structure
 ```
-startup-factory/
-├── templates/neoforge/          # Cookiecutter template (FastAPI + LitPWA)
-│   └── {{cookiecutter.project_slug}}/  # Template project structure
-├── tools/                       # AI orchestration tools
-│   ├── mvp-orchestrator-script.py      # Main orchestrator
-│   ├── meta-fill-integration.py        # Meta-fill integration
-│   ├── perplexity-app-integration.py   # Perplexity integration
-│   └── mvp_projects/                   # Generated project data
-├── docs/                        # Documentation and plans
-│   ├── PLAN.md                  # Launch readiness plan
-│   ├── TODO.md                  # Development roadmap
-│   └── SETUP.md                 # Setup instructions
-├── scripts/                     # Automation scripts
-│   └── new_startup.sh           # Startup creation script
-├── patches/                     # Template customizations
-└── s-01/                        # Example startup (for testing)
+startup-factory/                 # Main repository
+├── templates/                   # Startup templates
+│   └── neoforge/               # FastAPI + LitPWA template
+│       ├── cookiecutter.json   # Template configuration
+│       └── {{cookiecutter.project_slug}}/  # Template structure
+│           ├── backend/         # FastAPI app (Python 3.12+)
+│           │   ├── app/         # Main application code
+│           │   ├── tests/       # Backend tests (pytest)
+│           │   └── docker-compose.dev.yml
+│           └── frontend/        # Lit PWA (ES2021+)
+│               ├── src/         # Component library
+│               ├── test/        # Frontend tests (Vitest)
+│               └── package.json
+├── tools/                       # AI orchestration system
+│   ├── mvp_orchestrator_script.py      # **MAIN ORCHESTRATOR**
+│   ├── meta_fill_integration.py        # Template generation
+│   ├── perplexity_app_integration.py   # Market research
+│   └── ai_providers.py                # Multi-AI coordination
+├── worktrees/                   # Parallel development branches
+│   ├── track-a-core/           # Multi-startup infrastructure
+│   ├── track-b-templates/      # Template ecosystem
+│   ├── track-c-ai-coord/       # AI coordination
+│   └── track-d-production/     # Production optimization
+├── production_projects/         # Generated startups
+├── monitoring/                  # Prometheus + Grafana
+└── scripts/                    # Automation utilities
+    └── new_startup.sh          # Quick startup creation
 ```
+
+### Key Components to Understand
+
+#### 1. MVP Orchestrator (`tools/mvp_orchestrator_script.py`)
+- **Purpose**: Main AI coordination engine for MVP development
+- **Dependencies**: Uses uv for dependency management (auto-installs)
+- **Key Features**: Human-in-loop gates, multi-AI provider routing, cost tracking
+- **Entry Point**: `uv run tools/mvp_orchestrator_script.py`
+
+#### 2. Template System (`templates/neoforge/`)
+- **Architecture**: Cookiecutter-based project generation
+- **Stack**: FastAPI (backend) + Lit PWA (frontend) + PostgreSQL
+- **Features**: Pre-configured auth, testing, monitoring, deployment
+- **Generated Structure**: Complete production-ready startup
+
+#### 3. Worktree Development Pattern
+- **Strategy**: Parallel development using `git worktree add`
+- **Isolation**: Each agent/track works in separate filesystem
+- **Integration**: Shared git object store, coordinated merging
 
 ### Technology Stack
 - **Backend:** FastAPI, SQLAlchemy, PostgreSQL, Redis, Celery
@@ -110,48 +150,77 @@ AI_PROVIDER_USAGE = {
 - **Security:** Automated scanning with Bandit, OWASP ZAP
 - **Performance:** <2s story generation, <500MB memory usage
 
-## Build and Development Commands
+## Essential Development Commands
 
-### Setup
+### Initial Setup and Project Creation
 ```bash
-# Create new startup
+# Create new startup project
 make init STARTUP=s-03
 
-# Start development environment
+# Start full development environment (FastAPI + Lit + monitoring)
 make dev
 
-# Run CI locally
+# Run complete CI pipeline locally
 make ci
 ```
 
-### Backend Development
+### MVP Orchestrator - Core Tool
 ```bash
-# Run all tests
-docker compose -f backend/docker-compose.dev.yml run --rm api pytest
+# Run the main MVP orchestrator (primary AI coordination tool)
+uv run tools/mvp_orchestrator_script.py
 
-# Run specific test
-docker compose -f backend/docker-compose.dev.yml run --rm api pytest tests/path/to/test_file.py::test_function_name
+# Test orchestrator workflow integration
+python tools/test_orchestrator_workflow.py
 
-# Lint code
-ruff check backend/
-
-# Format code
-ruff format backend/
+# Check orchestrator API integration status
+python tools/test_api_integration.py
 ```
 
-### Frontend Development
+### Backend Development (Templates and Generated Projects)
 ```bash
+# Navigate to generated project backend
+cd templates/neoforge/{{cookiecutter.project_slug}}/backend/
+
+# Run all backend tests with coverage
+docker compose -f docker-compose.dev.yml run --rm api pytest --cov=app --cov-report=html
+
+# Run specific test file
+docker compose -f docker-compose.dev.yml run --rm api pytest tests/api/test_users.py -v
+
+# Run single test function
+docker compose -f docker-compose.dev.yml run --rm api pytest tests/api/test_auth.py::test_login_valid_user -v
+
+# Code quality checks
+ruff check app/
+ruff format app/
+
+# Database migrations
+docker compose -f docker-compose.dev.yml run --rm api alembic upgrade head
+docker compose -f docker-compose.dev.yml run --rm api alembic revision --autogenerate -m "description"
+
+# Start backend development server with hot reload
+docker compose -f docker-compose.dev.yml up api
+```
+
+### Frontend Development (Lit PWA)
+```bash
+# Navigate to frontend directory
+cd frontend/
+
 # Install dependencies
 npm install
 
-# Start development server
+# Start development server with hot reload
 npm run dev
 
-# Run tests
+# Run all tests
 npm run test
 
-# Run specific test
-npm run test -- component-name
+# Run specific test component
+npm run test -- --grep="ComponentName"
+
+# Run E2E tests with Playwright
+npm run test:e2e
 
 # Lint and format
 npm run lint
@@ -159,6 +228,9 @@ npm run format
 
 # Build for production
 npm run build
+
+# Serve production build locally
+npm run preview
 ```
 
 ## Code Style and Conventions
@@ -324,22 +396,80 @@ npm run build
 - **Performance Issues:** Monitor resource usage, optimize queries
 - **AI Agent Issues:** Check API keys, rate limits, token usage
 
-### Debug Commands
+## Common Workflows and Debugging
+
+### Quick Startup Creation Workflow
 ```bash
-# Check service health
+# 1. Create new startup (copies template)
+make init STARTUP=my-startup
+
+# 2. Navigate to new startup
+cd my-startup/
+
+# 3. Start development environment
+make dev
+
+# 4. Test the generated project
+cd backend/ && docker compose -f docker-compose.dev.yml run --rm api pytest
+cd frontend/ && npm test
+```
+
+### MVP Orchestrator Workflows
+```bash
+# Run complete AI-powered MVP development workflow
+uv run tools/mvp_orchestrator_script.py
+
+# Test specific orchestrator components
+python tools/test_orchestrator_workflow.py
+python tools/test_api_integration.py
+
+# Check orchestrator configuration
+cat tools/config.yaml  # Main config file
+cat tools/config.template.yaml  # Template for setup
+```
+
+### Debugging Commands
+```bash
+# Check all running services
 docker compose ps
 
-# View logs
-docker compose logs -f <service>
+# View real-time logs for specific service
+docker compose logs -f api
+docker compose logs -f frontend
 
-# Run specific test with debug
-pytest -v -s tests/path/to/test.py
+# Debug backend issues
+cd backend/
+docker compose -f docker-compose.dev.yml run --rm api python -c "from app.core.config import settings; print(settings)"
 
-# Run MVP orchestrator
-uv run tools/mvp-orchestrator-script.py
+# Debug frontend build issues  
+cd frontend/
+npm run build -- --debug
 
-# Test orchestrator components
-python tools/test-integration.py
+# Test database connectivity
+cd backend/
+docker compose -f docker-compose.dev.yml run --rm api python -c "from app.db.session import engine; print(engine.execute('SELECT 1').scalar())"
+
+# Check template generation
+python -c "from cookiecutter.main import cookiecutter; cookiecutter('templates/neoforge/')"
+
+# Validate generated project structure
+find . -name "*.py" | head -10  # Check Python files
+find . -name "*.js" | head -10   # Check JS files
+```
+
+### Branch and Worktree Management
+```bash
+# List current worktrees
+git worktree list
+
+# Create new worktree for parallel development
+git worktree add ../wt-feature-name feature/feature-name
+
+# Switch between worktrees
+cd ../wt-feature-name
+
+# Remove worktree when done
+git worktree remove ../wt-feature-name
 ```
 
 ## Best Practices

@@ -1,8 +1,12 @@
 # Startup Factory TODO - Development Roadmap
 
-**Last Updated**: July 14, 2025  
+**Last Updated**: July 15, 2025  
 
 **Note:** All orchestration, escalation, and gate protocols are managed by main agent leadership. See CLAUDE.md and docs/transition-log.md for details.
+
+**Technical/Documentation Debt Audit:**
+- All contributors should audit for technical and documentation debt before each major release.
+- See checklist below for audit item.
 
 **Status**: 85% Ready for Production Launch  
 **Next Milestone**: Complete Integration Testing & Launch Readiness

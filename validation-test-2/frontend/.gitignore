@@ -1,0 +1,5 @@
+# Coverage reports
+/coverage
+.nyc_output
+*.lcov 
+*storybook.log

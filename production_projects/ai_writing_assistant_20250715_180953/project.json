@@ -1,0 +1,20 @@
+{
+  "project_id": "ai_writing_assistant_20250715_180953",
+  "project_name": "AI Writing Assistant",
+  "industry": "Content Creation",
+  "category": "B2B SaaS",
+  "created_at": "2025-07-15 18:09:53.181427",
+  "current_phase": 1,
+  "phase_status": {
+    "phase_1": "failed"
+  },
+  "market_research": null,
+  "founder_analysis": null,
+  "mvp_spec": null,
+  "architecture": null,
+  "code_artifacts": {},
+  "deployment_config": null,
+  "gates": {},
+  "api_costs": {},
+  "time_spent": {}
+}
