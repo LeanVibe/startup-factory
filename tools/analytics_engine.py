@@ -74,6 +74,9 @@ class AnalyticsDatabase:
     def _init_database(self):
         """Initialize database schema"""
         with sqlite3.connect(self.db_path) as conn:
+            # Configure datetime adapters to avoid deprecation warnings
+            sqlite3.register_adapter(datetime, lambda dt: dt.isoformat())
+            sqlite3.register_converter("TIMESTAMP", lambda val: datetime.fromisoformat(val.decode()))
             # Startups table
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS startups (
@@ -120,7 +123,7 @@ class AnalyticsDatabase:
     
     def store_startup(self, startup: StartupMetadata):
         """Store startup metadata"""
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.db_path, detect_types=sqlite3.PARSE_DECLTYPES) as conn:
             conn.execute("""
                 INSERT OR REPLACE INTO startups 
                 (id, name, industry, category, created_at, completed_at, status, 
@@ -138,7 +141,7 @@ class AnalyticsDatabase:
     
     def store_performance_metric(self, metric: PerformanceMetrics):
         """Store performance metric"""
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.db_path, detect_types=sqlite3.PARSE_DECLTYPES) as conn:
             conn.execute("""
                 INSERT INTO performance_metrics 
                 (timestamp, memory_usage_mb, cpu_percent, concurrent_startups, 
@@ -152,7 +155,7 @@ class AnalyticsDatabase:
     
     def log_event(self, event_type: str, startup_id: str = None, phase: str = None, details: Dict = None):
         """Log an event"""
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.db_path, detect_types=sqlite3.PARSE_DECLTYPES) as conn:
             conn.execute("""
                 INSERT INTO events (timestamp, event_type, startup_id, phase, details)
                 VALUES (?, ?, ?, ?, ?)
@@ -163,17 +166,17 @@ class AnalyticsDatabase:
     
     def get_startups_dataframe(self) -> pd.DataFrame:
         """Get startups as pandas DataFrame"""
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.db_path, detect_types=sqlite3.PARSE_DECLTYPES) as conn:
             return pd.read_sql_query("SELECT * FROM startups", conn)
     
     def get_performance_dataframe(self) -> pd.DataFrame:
         """Get performance metrics as pandas DataFrame"""
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.db_path, detect_types=sqlite3.PARSE_DECLTYPES) as conn:
             return pd.read_sql_query("SELECT * FROM performance_metrics", conn)
     
     def get_events_dataframe(self) -> pd.DataFrame:
         """Get events as pandas DataFrame"""
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.db_path, detect_types=sqlite3.PARSE_DECLTYPES) as conn:
             return pd.read_sql_query("SELECT * FROM events", conn)
 
 class PerformanceAnalyzer:
@@ -249,6 +252,19 @@ class PerformanceAnalyzer:
                     'max_concurrent_startups': df['concurrent_startups'].max(),
                     'avg_response_time_ms': df['response_time_ms'].mean(),
                     'error_rate': df['error_count'].sum() / len(df) if len(df) > 0 else 0
+                }
+            elif label == 'recent':
+                # Always include 'recent' section for consistent API, even if no recent data
+                analysis[label] = {
+                    'avg_memory_usage_mb': 0.0,
+                    'max_memory_usage_mb': 0.0,
+                    'avg_cpu_percent': 0.0,
+                    'max_cpu_percent': 0.0,
+                    'avg_concurrent_startups': 0.0,
+                    'max_concurrent_startups': 0.0,
+                    'avg_response_time_ms': 0.0,
+                    'error_rate': 0.0,
+                    'note': 'No recent data available'
                 }
         
         return analysis
