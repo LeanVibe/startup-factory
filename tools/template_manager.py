@@ -182,7 +182,7 @@ class TemplateProcessor:
         def replace_cookiecutter(match):
             var_name = match.group(1)
             if var_name.startswith('cookiecutter.'):
-                var_name = var_name[12:]  # Remove 'cookiecutter.' prefix
+                var_name = var_name[13:]  # Remove 'cookiecutter.' prefix (13 chars)
             return str(context.get(var_name, match.group(0)))
         
         # Replace {{cookiecutter.variable}} and {{variable}}
