@@ -108,6 +108,20 @@ class BudgetMonitor:
             warning_threshold: Percentage at which to issue warnings
             hard_stop: Whether to stop processing when limit exceeded
         """
+        # Validate inputs
+        if not startup_id or not startup_id.strip():
+            raise ValueError("Startup ID cannot be empty")
+        if daily_limit < 0:
+            raise ValueError("Daily limit cannot be negative")
+        if weekly_limit < 0:
+            raise ValueError("Weekly limit cannot be negative")
+        if monthly_limit < 0:
+            raise ValueError("Monthly limit cannot be negative")
+        if total_limit < 0:
+            raise ValueError("Total limit cannot be negative")
+        if not 0 <= warning_threshold <= 1.0:
+            raise ValueError("Warning threshold must be between 0 and 1.0")
+        
         async with self._lock:
             self.budget_limits[startup_id] = BudgetLimit(
                 startup_id=startup_id,
@@ -137,6 +151,16 @@ class BudgetMonitor:
             task_type: Type of task executed
             success: Whether the task was successful
         """
+        # Validate inputs
+        if not startup_id or not startup_id.strip():
+            raise ValueError("Startup ID cannot be empty")
+        if not provider or not provider.strip():
+            raise ValueError("Provider cannot be empty")
+        if cost < 0:
+            raise ValueError("Cost cannot be negative")
+        if tokens_used < 0:
+            raise ValueError("Tokens used cannot be negative")
+        
         async with self._lock:
             # Record the spending
             record = SpendingRecord(
@@ -150,9 +174,10 @@ class BudgetMonitor:
                 success=success
             )
             self.spending_records.append(record)
-        
-        # Check budget limits after recording
-        await self._check_budget_limits(startup_id, cost)
+            
+            # Check budget limits after recording (only for successful transactions)
+            if success:
+                await self._check_budget_limits(startup_id, cost)
         
         logger.debug(f"Recorded spending: {startup_id} ${cost:.4f} via {provider}")
     
@@ -239,7 +264,11 @@ class BudgetMonitor:
         # Call registered alert callbacks
         for callback in self.alert_callbacks:
             try:
-                await asyncio.get_event_loop().run_in_executor(None, callback, alert)
+                if asyncio.iscoroutinefunction(callback):
+                    await callback(alert)
+                else:
+                    # Run synchronous callback in executor to avoid blocking
+                    await asyncio.get_event_loop().run_in_executor(None, callback, alert)
             except Exception as e:
                 logger.error(f"Error in alert callback: {e}")
         
@@ -407,6 +436,58 @@ class BudgetMonitor:
             alert for alert in self.alerts
             if alert.timestamp >= cutoff_time
         ]
+    
+    async def get_remaining_budget(self, startup_id: str) -> float:
+        """
+        Get remaining budget for a startup (based on daily limit)
+        
+        Args:
+            startup_id: Startup identifier
+            
+        Returns:
+            float: Remaining daily budget amount
+        """
+        budget_limit = self.budget_limits.get(startup_id)
+        if not budget_limit or budget_limit.daily_limit <= 0:
+            return float('inf')  # No limit set
+        
+        now = datetime.utcnow()
+        daily_spend = await self._get_spending_in_period(startup_id, now - timedelta(days=1), now)
+        return max(0.0, budget_limit.daily_limit - daily_spend)
+    
+    async def get_spending_summary(self, startup_id: str) -> Dict[str, Any]:
+        """
+        Get spending summary for a startup
+        
+        Args:
+            startup_id: Startup identifier
+            
+        Returns:
+            dict: Spending summary by provider and time period
+        """
+        now = datetime.utcnow()
+        
+        # Calculate spending by time period
+        daily_spend = await self._get_spending_in_period(startup_id, now - timedelta(days=1), now)
+        weekly_spend = await self._get_spending_in_period(startup_id, now - timedelta(weeks=1), now)
+        monthly_spend = await self._get_spending_in_period(startup_id, now - timedelta(days=30), now)
+        total_spend = await self._get_total_spending(startup_id)
+        
+        # Calculate spending by provider
+        provider_spending = {}
+        for record in self.spending_records:
+            if record.startup_id == startup_id and record.success:
+                if record.provider not in provider_spending:
+                    provider_spending[record.provider] = 0
+                provider_spending[record.provider] += record.cost
+        
+        return {
+            'total': total_spend,
+            'daily': daily_spend,
+            'weekly': weekly_spend,
+            'monthly': monthly_spend,
+            'by_provider': provider_spending
+        }
     
     async def export_spending_report(self, startup_id: Optional[str] = None,
                                    start_date: Optional[datetime] = None,

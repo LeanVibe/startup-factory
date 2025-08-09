@@ -538,14 +538,13 @@ class TestRealAIProviderIntegration:
         provider = OpenAIProvider(openai_config)
         
         # Set strict budget limit
-        budget_limit = BudgetLimit(
+        await budget_monitor.set_budget_limit(
             startup_id="budget_test",
             daily_limit=0.50,  # 50 cents
             weekly_limit=2.00,
             monthly_limit=10.00,
             total_limit=50.00
         )
-        await budget_monitor.set_budget_limit("budget_test", budget_limit)
         
         task = Task(
             id=generate_task_id(),
