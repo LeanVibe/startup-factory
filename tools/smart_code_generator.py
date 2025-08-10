@@ -37,7 +37,7 @@ except ImportError as e:
     print("Install with: pip install anthropic rich")
     exit(1)
 
-from founder_interview_system import BusinessBlueprint, BusinessModel, IndustryVertical
+from .founder_interview_system import BusinessBlueprint, BusinessModel, IndustryVertical
 
 console = Console()
 logger = logging.getLogger(__name__)

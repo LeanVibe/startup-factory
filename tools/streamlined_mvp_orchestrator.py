@@ -33,8 +33,8 @@ except ImportError as e:
     exit(1)
 
 # Import our new founder-focused systems
-from founder_interview_system import FounderInterviewAgent, BusinessBlueprint
-from business_blueprint_generator import BusinessLogicGenerator
+from .founder_interview_system import FounderInterviewAgent, BusinessBlueprint
+from .business_blueprint_generator import BusinessLogicGenerator
 
 console = Console()
 

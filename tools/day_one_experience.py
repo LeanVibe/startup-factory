@@ -49,9 +49,9 @@ except ImportError as e:
     exit(1)
 
 # Import our AI-powered components
-from founder_interview_system import FounderInterviewAgent, BusinessBlueprint
-from business_blueprint_generator import BusinessLogicGenerator
-from smart_code_generator import SmartCodeGenerator
+from .founder_interview_system import FounderInterviewAgent, BusinessBlueprint
+from .business_blueprint_generator import BusinessLogicGenerator
+from .smart_code_generator import SmartCodeGenerator
 
 console = Console()
 
