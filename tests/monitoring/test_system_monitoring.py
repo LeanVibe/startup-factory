@@ -7,12 +7,12 @@ Tests health monitoring, budget monitoring, and alert systems
 import asyncio
 import pytest
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 import logging
-from dataclasses import dataclass
-from typing import Dict, List, Any
+from dataclasses import dataclass, field
+from typing import Dict, List, Any, Callable, Optional
 
 # Import the modules under test
 import sys
@@ -38,6 +38,7 @@ class MockProviderResult:
     cost: float = 0.0
     tokens_used: int = 0
     latency_ms: float = 0.0
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 class MockAIProvider:
@@ -91,6 +92,8 @@ class MockAIProviderManager:
 
 
 # Create a mock ProviderHealthMonitor for testing without dependencies
+logger = logging.getLogger(__name__)
+
 class TestableProviderHealthMonitor(ProviderHealthMonitor):
     """Testable version that doesn't depend on external modules"""
     
@@ -103,7 +106,7 @@ class TestableProviderHealthMonitor(ProviderHealthMonitor):
         self.provider_health: Dict[str, ProviderHealth] = {}
         self.health_history: List[Dict[str, Any]] = []
         self.alerts: List[HealthAlert] = []
-        self.alert_callbacks: List[Callable[[HealthAlert], None]] = []
+        self.alert_callbacks: List[Callable] = []
         
         # Monitoring control
         self.monitoring = False
@@ -578,7 +581,7 @@ class TestBudgetMonitoring:
     async def test_spending_summary(self, budget_monitor):
         """Test spending summary generation"""
         # Record spending over time
-        base_time = datetime.utcnow()
+        base_time = datetime.now(UTC)
         
         # Manually add records with specific timestamps
         records = [
@@ -638,7 +641,7 @@ class TestBudgetMonitoring:
             current_spend=10.0,
             limit_amount=15.0,
             percentage_used=0.67,
-            timestamp=datetime.utcnow() - timedelta(hours=25)  # Older than 24 hours
+            timestamp=datetime.now(UTC) - timedelta(hours=25)  # Older than 24 hours
         )
         
         recent_alert = BudgetAlert(
@@ -648,7 +651,7 @@ class TestBudgetMonitoring:
             current_spend=12.0,
             limit_amount=15.0,
             percentage_used=0.8,
-            timestamp=datetime.utcnow() - timedelta(hours=1)  # Recent
+            timestamp=datetime.now(UTC) - timedelta(hours=1)  # Recent
         )
         
         budget_monitor.alerts.extend([old_alert, recent_alert])

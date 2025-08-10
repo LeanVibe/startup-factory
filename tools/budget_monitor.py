@@ -7,7 +7,7 @@ Tracks costs, enforces limits, and provides alerts for startup factory operation
 import asyncio
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Callable, Any
 
@@ -36,7 +36,7 @@ class BudgetLimit:
     total_limit: float
     warning_threshold: float = 0.8  # Warn at 80% of limit
     hard_stop: bool = True  # Stop processing when limit exceeded
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass
@@ -48,7 +48,7 @@ class BudgetAlert:
     current_spend: float
     limit_amount: float
     percentage_used: float
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass
@@ -169,7 +169,7 @@ class BudgetMonitor:
                 task_id=task_id,
                 cost=cost,
                 tokens_used=tokens_used,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(UTC),
                 task_type=task_type,
                 success=success
             )
@@ -188,7 +188,7 @@ class BudgetMonitor:
             # No limits set for this startup
             return
         
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         
         # Calculate current spending in different time periods
         daily_spend = await self._get_spending_in_period(startup_id, now - timedelta(days=1), now)
@@ -297,7 +297,7 @@ class BudgetMonitor:
         if not budget_limit:
             return True  # No limits set
         
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         
         # Calculate current spending + estimated cost
         daily_spend = await self._get_spending_in_period(startup_id, now - timedelta(days=1), now)
@@ -342,7 +342,7 @@ class BudgetMonitor:
                 "total_spent": await self._get_total_spending(startup_id)
             }
         
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         
         daily_spend = await self._get_spending_in_period(startup_id, now - timedelta(days=1), now)
         weekly_spend = await self._get_spending_in_period(startup_id, now - timedelta(weeks=1), now)
@@ -376,7 +376,7 @@ class BudgetMonitor:
     
     async def get_global_budget_status(self) -> Dict[str, Any]:
         """Get global budget status across all startups"""
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         
         # Calculate global spending
         daily_records = [
@@ -431,7 +431,7 @@ class BudgetMonitor:
     
     async def get_recent_alerts(self, hours: int = 24) -> List[BudgetAlert]:
         """Get recent alerts within specified hours"""
-        cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+        cutoff_time = datetime.now(UTC) - timedelta(hours=hours)
         return [
             alert for alert in self.alerts
             if alert.timestamp >= cutoff_time
@@ -451,7 +451,7 @@ class BudgetMonitor:
         if not budget_limit or budget_limit.daily_limit <= 0:
             return float('inf')  # No limit set
         
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         daily_spend = await self._get_spending_in_period(startup_id, now - timedelta(days=1), now)
         return max(0.0, budget_limit.daily_limit - daily_spend)
     
@@ -465,7 +465,7 @@ class BudgetMonitor:
         Returns:
             dict: Spending summary by provider and time period
         """
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         
         # Calculate spending by time period
         daily_spend = await self._get_spending_in_period(startup_id, now - timedelta(days=1), now)

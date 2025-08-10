@@ -8,7 +8,7 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from enum import Enum
 from typing import Dict, List, Optional, Callable, Any
 
@@ -35,7 +35,7 @@ class HealthMetric:
     threshold_warning: float
     threshold_critical: float
     unit: str = ""
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass
@@ -60,7 +60,7 @@ class HealthAlert:
     severity: HealthStatus
     message: str
     metric_name: Optional[str] = None
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 class ProviderHealthMonitor:
@@ -119,7 +119,7 @@ class ProviderHealthMonitor:
             self.provider_health[provider_name] = ProviderHealth(
                 provider_name=provider_name,
                 overall_status=HealthStatus.UNKNOWN,
-                last_check=datetime.utcnow(),
+                last_check=datetime.now(UTC),
                 uptime_percentage=100.0,
                 metrics={},
                 recent_errors=[],
@@ -211,7 +211,7 @@ class ProviderHealthMonitor:
             
             # Update last successful call if successful
             if result.success:
-                health.last_successful_call = datetime.utcnow()
+                health.last_successful_call = datetime.now(UTC)
                 health.consecutive_failures = 0
             else:
                 health.consecutive_failures += 1
@@ -230,7 +230,7 @@ class ProviderHealthMonitor:
             await self._update_health_metrics(provider_name, False, 0, 0)
         
         # Update overall health status
-        health.last_check = datetime.utcnow()
+        health.last_check = datetime.now(UTC)
         health.next_check = health.last_check + timedelta(seconds=self.check_interval)
         await self._calculate_overall_health(provider_name)
     
@@ -246,7 +246,7 @@ class ProviderHealthMonitor:
             cost: Cost of the call
         """
         health = self.provider_health[provider_name]
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         
         # Get cost statistics for comparison
         cost_stats = self.provider_manager.get_cost_statistics()
@@ -331,7 +331,7 @@ class ProviderHealthMonitor:
     
     def _get_recent_call_history(self, provider_name: str, hours: int = 1) -> List[Dict[str, Any]]:
         """Get recent call history for a provider"""
-        cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+        cutoff_time = datetime.now(UTC) - timedelta(hours=hours)
         
         # Get from provider manager's call history if available
         provider = self.provider_manager.get_provider(provider_name)
@@ -420,7 +420,7 @@ class ProviderHealthMonitor:
                 severity=HealthStatus.WARNING,
                 message=f"Provider {provider_name} health degraded to WARNING"
             )
-        elif new_status == HealthStatus.HEALTHY and old_status in [HealthStatus.WARNING, HealthStatus.CRITICAL]:
+        elif new_status == HealthStatus.HEALTHY and old_status in [HealthStatus.WARNING, HealthStatus.CRITICAL, HealthStatus.UNKNOWN]:
             alert = HealthAlert(
                 provider_name=provider_name,
                 alert_type='recovery',
@@ -521,7 +521,7 @@ class ProviderHealthMonitor:
     
     async def get_recent_alerts(self, hours: int = 24) -> List[HealthAlert]:
         """Get recent health alerts"""
-        cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+        cutoff_time = datetime.now(UTC) - timedelta(hours=hours)
         return [
             alert for alert in self.alerts
             if alert.timestamp >= cutoff_time
@@ -562,7 +562,7 @@ class ProviderHealthMonitor:
             "recent_alerts": len(recent_alerts),
             "last_check": max(
                 (health.last_check for health in self.provider_health.values()),
-                default=datetime.utcnow()
+                default=datetime.now(UTC)
             ).isoformat()
         }
 

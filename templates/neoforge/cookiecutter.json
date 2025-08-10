@@ -20,6 +20,25 @@
         "htmlcov",
         ".pytest_cache",
         "*.egg-info",
-        ".coverage"
+        ".coverage",
+        "*.sh",
+        "*.js",
+        "*.mjs",
+        "*.txt",
+        "*.log",
+        "*.pid",
+        "*.json.template",
+        "*.yml",
+        "*.yaml",
+        "*.css",
+        "*.scss",
+        "*.html",
+        "*.md",
+        "*.mdx",
+        "*.tmpl",
+        "deploy/grafana/**/*.json",
+        "frontend/.storybook/**/*.json",
+        "frontend/public/**/*.json",
+        "backend/tests/core/test_email_templates.py"
     ]
 }
