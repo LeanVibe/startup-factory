@@ -12,8 +12,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Dict, List, Optional, Callable, Any
 
-from .core_types import Task, TaskType, ProviderError
-from .ai_providers import AIProviderManager
+from core_types import Task, TaskType, ProviderError
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +75,7 @@ class ProviderHealthMonitor:
     - Historical health data tracking
     """
     
-    def __init__(self, provider_manager: AIProviderManager, check_interval: float = 60.0):
+    def __init__(self, provider_manager, check_interval: float = 60.0):
         """
         Initialize health monitor
         
@@ -590,7 +589,7 @@ def default_file_health_alert_handler(alert: HealthAlert, log_file: str = "healt
 _global_health_monitor: Optional[ProviderHealthMonitor] = None
 
 
-def get_global_health_monitor(provider_manager: AIProviderManager) -> ProviderHealthMonitor:
+def get_global_health_monitor(provider_manager) -> ProviderHealthMonitor:
     """Get or create the global health monitor instance"""
     global _global_health_monitor
     if _global_health_monitor is None:

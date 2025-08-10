@@ -1,4 +1,0 @@
-[tool.hatch.build.targets.wheel]
-packages = ["app"]
-include = ["**/*"]
-source = "app" 
