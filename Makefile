@@ -1,5 +1,5 @@
 # Startup Factory - Main Makefile
-.PHONY: help init dev test clean lint deploy health setup-production validate-production
+.PHONY: help init dev test clean lint deploy health setup-production validate-production validate-templates validate-templates-ci template-regression-test template-benchmark
 
 # Default target shows help
 help: ## Show this help message
@@ -19,10 +19,11 @@ dev: ## Start full development environment (Docker Compose)
 	@docker compose up --build
 
 # Testing Commands
-test: ## Run all tests (analytics, production, integration)
+test: ## Run all tests (analytics, production, integration, templates)
 	@echo "Running comprehensive test suite..."
 	@python -m pytest tests/analytics/ -v --tb=short
 	@python -m pytest tests/production/ -v --tb=short
+	@python -m pytest tests/templates/ -v --tb=short
 	@echo "✅ All tests completed"
 
 test-analytics: ## Run analytics engine tests only  
@@ -94,8 +95,36 @@ ci-full: ## Run full CI/CD pipeline with all checks
 	@make test
 	@make lint  
 	@make system-check
+	@make validate-templates-ci
 	@echo "✅ Full CI/CD pipeline completed"
+
+# Template Quality Gates Commands
+validate-templates: ## Validate all cookiecutter templates
+	@echo "Running template validation..."
+	@python tools/template_validator_cli.py validate-all --verbose
+
+validate-templates-ci: ## Validate templates for CI/CD (strict mode)
+	@echo "Running template validation in CI mode..."
+	@python tools/template_validator_cli.py ci --min-score 0.8
+
+template-regression-test: ## Run template regression tests
+	@echo "Running template regression tests..."
+	@python tools/template_validator_cli.py regression-test --verbose
+
+template-benchmark: ## Benchmark template performance
+	@echo "Benchmarking template performance..."
+	@python tools/template_validator_cli.py benchmark --template neoforge --iterations 5
+
+validate-template: ## Validate specific template (make validate-template TEMPLATE=neoforge)
+	@if [ -z "$(TEMPLATE)" ]; then echo "Usage: make validate-template TEMPLATE=template-name"; exit 1; fi
+	@python tools/template_validator_cli.py validate --template $(TEMPLATE) --verbose
+
+list-templates: ## List available templates
+	@python tools/template_validator_cli.py list
 
 # Development Shortcuts
 quick-test: ## Run fastest subset of tests for development
 	@python -m pytest tests/analytics/test_analytics_engine.py::TestAnalyticsDatabase::test_database_initialization -v
+
+template-quick-test: ## Run template tests quickly
+	@python -m pytest tests/templates/test_template_quality_gates.py::TestTemplateQualityGates::test_neoforge_template_validation -v

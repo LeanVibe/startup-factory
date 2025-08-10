@@ -1,0 +1,21 @@
+# Template Quality Gates System Requirements
+
+# Core dependencies (should already be in main requirements.txt)
+cookiecutter>=2.1.0
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pyyaml>=6.0
+toml>=0.10.0
+
+# Security scanning
+bandit[toml]>=1.7.0
+
+# Additional validation dependencies
+jsonschema>=4.0.0  # JSON schema validation
+yamllint>=1.26.0   # YAML linting
+black>=22.0.0      # Python code formatting check
+ruff>=0.0.270      # Fast Python linter
+
+# Performance monitoring
+psutil>=5.8.0      # System resource monitoring
+memory_profiler>=0.60.0  # Memory usage profiling
