@@ -14,7 +14,7 @@ import subprocess
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from enum import Enum
 from typing import Dict, List, Optional, Any, Callable
 
@@ -106,7 +106,7 @@ class CircuitBreaker:
         elif self.state == CircuitBreakerState.OPEN:
             # Check if we should try half-open
             if self.last_failure_time and \
-               (datetime.utcnow() - self.last_failure_time).total_seconds() > self.config.recovery_timeout:
+               (datetime.now(UTC) - self.last_failure_time).total_seconds() > self.config.recovery_timeout:
                 self.state = CircuitBreakerState.HALF_OPEN
                 self.success_count = 0
                 logger.info(f"Circuit breaker for {self.provider_name} transitioning to HALF_OPEN")
@@ -117,7 +117,7 @@ class CircuitBreaker:
     
     def record_success(self):
         """Record successful request"""
-        self.last_success_time = datetime.utcnow()
+        self.last_success_time = datetime.now(UTC)
         
         if self.state == CircuitBreakerState.HALF_OPEN:
             self.success_count += 1
@@ -131,7 +131,7 @@ class CircuitBreaker:
     
     def record_failure(self):
         """Record failed request"""
-        self.last_failure_time = datetime.utcnow()
+        self.last_failure_time = datetime.now(UTC)
         self.failure_count += 1
         
         if self.state == CircuitBreakerState.CLOSED:
