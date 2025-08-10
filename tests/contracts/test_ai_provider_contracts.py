@@ -39,15 +39,16 @@ class TestAIProviderManagerContracts:
     def mock_openai_provider(self):
         """Mock OpenAI provider that follows interface contract"""
         mock = Mock(spec=OpenAIProvider)
-        mock.process_task = AsyncMock(
+        mock.call_api = AsyncMock(
             return_value=TaskResult(
                 task_id="test-task-1",
+                startup_id="test-startup",
                 success=True,
-                output="Test response",
+                content="Test response",
                 cost=0.05,
-                tokens_used=100,
-                execution_time=1.2,
-                provider="openai"
+                provider_used="openai",
+                execution_time_seconds=1.2,
+                tokens_used=100
             )
         )
         mock.config = ProviderConfig(
@@ -59,6 +60,7 @@ class TestAIProviderManagerContracts:
             max_tokens=4000,
             max_concurrent=10
         )
+        mock.call_history = []
         return mock
     
     @pytest.fixture
@@ -87,6 +89,18 @@ class TestAIProviderManagerContracts:
         
         # Inject mocked dependencies
         manager.providers = {"openai": mock_openai_provider}
+        manager.configurations = {
+            "openai": ProviderConfig(
+                name="openai",
+                api_key="test-key",
+                models={"code": "gpt-4o"},
+                cost_per_input_token=0.00001,
+                cost_per_output_token=0.00003,
+                max_tokens=4000,
+                max_concurrent=10,
+                enabled=True
+            )
+        }
         manager.budget_monitor = mock_budget_monitor
         manager.health_monitor = mock_health_monitor
         
@@ -113,17 +127,17 @@ class TestAIProviderManagerContracts:
         assert isinstance(result, TaskResult)
         assert result.task_id == task.id
         assert result.success is True
-        assert isinstance(result.output, str)
+        assert isinstance(result.content, str)
         assert isinstance(result.cost, float)
         assert result.cost >= 0
         assert isinstance(result.tokens_used, int)
         assert result.tokens_used > 0
-        assert isinstance(result.execution_time, float)
-        assert result.execution_time > 0
-        assert result.provider == "openai"
+        assert isinstance(result.execution_time_seconds, float)
+        assert result.execution_time_seconds > 0
+        assert result.provider_used == "openai"
         
         # Verify provider was called with correct task
-        mock_openai_provider.process_task.assert_called_once_with(task)
+        mock_openai_provider.call_api.assert_called_once_with(task)
     
     @pytest.mark.asyncio
     async def test_budget_integration_contract(self, provider_manager, mock_budget_monitor):
@@ -243,15 +257,16 @@ class TestAIProviderManagerContracts:
         """Test task routing to correct providers follows contract"""
         # Arrange - Add multiple providers
         mock_anthropic = Mock(spec=AnthropicProvider)
-        mock_anthropic.process_task = AsyncMock(
+        mock_anthropic.call_api_with_reliability = AsyncMock(
             return_value=TaskResult(
                 task_id="anthropic-task",
+                startup_id="test-startup",
                 success=True,
-                output="Anthropic response", 
+                content="Anthropic response", 
                 cost=0.03,
-                tokens_used=50,
-                execution_time=0.8,
-                provider="anthropic"
+                provider_used="anthropic",
+                execution_time_seconds=0.8,
+                tokens_used=50
             )
         )
         provider_manager.providers["anthropic"] = mock_anthropic
@@ -360,10 +375,10 @@ class TestAIProviderInterfaceContract:
         
         # Assert interface compliance
         assert isinstance(provider, AIProviderInterface)
-        assert hasattr(provider, 'process_task')
+        assert hasattr(provider, 'call_api_with_reliability')
         assert hasattr(provider, 'calculate_cost')
         assert hasattr(provider, 'config')
-        assert callable(provider.process_task)
+        assert callable(provider.call_api_with_reliability)
         assert callable(provider.calculate_cost)
     
     def test_anthropic_provider_interface_compliance(self):
@@ -382,10 +397,10 @@ class TestAIProviderInterfaceContract:
         
         # Assert interface compliance
         assert isinstance(provider, AIProviderInterface)
-        assert hasattr(provider, 'process_task')
+        assert hasattr(provider, 'call_api_with_reliability')
         assert hasattr(provider, 'calculate_cost')
         assert hasattr(provider, 'config')
-        assert callable(provider.process_task)
+        assert callable(provider.call_api_with_reliability)
         assert callable(provider.calculate_cost)
 
 
