@@ -257,6 +257,18 @@ class TestAIProviderManagerContracts:
         """Test task routing to correct providers follows contract"""
         # Arrange - Add multiple providers
         mock_anthropic = Mock(spec=AnthropicProvider)
+        mock_anthropic.call_api = AsyncMock(
+            return_value=TaskResult(
+                task_id="anthropic-task",
+                startup_id="test-startup",
+                success=True,
+                content="Anthropic response",
+                cost=0.03,
+                provider_used="anthropic",
+                execution_time_seconds=0.8,
+                tokens_used=50
+            )
+        )
         mock_anthropic.call_api_with_reliability = AsyncMock(
             return_value=TaskResult(
                 task_id="anthropic-task",
@@ -270,6 +282,17 @@ class TestAIProviderManagerContracts:
             )
         )
         provider_manager.providers["anthropic"] = mock_anthropic
+        provider_manager.configurations["anthropic"] = ProviderConfig(
+            name="anthropic",
+            api_key="test-key",
+            models={"analysis": "claude-3-sonnet"},
+            cost_per_input_token=0.000015,
+            cost_per_output_token=0.000075,
+            max_tokens=4000,
+            max_concurrent=5,
+            enabled=True
+        )
+        mock_anthropic.call_history = []
         
         # Tasks that should route to different providers
         code_task = Task(
@@ -295,12 +318,12 @@ class TestAIProviderManagerContracts:
         analysis_result = await provider_manager.process_task(analysis_task)
         
         # Assert - Verify correct routing
-        assert code_result.provider == "openai"  # Code tasks go to OpenAI
-        assert analysis_result.provider == "anthropic"  # Analysis tasks go to Anthropic
+        assert code_result.provider_used == "openai"  # Code tasks go to OpenAI
+        assert analysis_result.provider_used == "anthropic"  # Analysis tasks go to Anthropic
         
         # Verify correct providers were called
-        provider_manager.providers["openai"].process_task.assert_called_with(code_task)
-        provider_manager.providers["anthropic"].process_task.assert_called_with(analysis_task)
+        provider_manager.providers["openai"].call_api.assert_called_with(code_task)
+        provider_manager.providers["anthropic"].call_api.assert_called_with(analysis_task)
     
     @pytest.mark.asyncio
     async def test_concurrent_task_processing_contract(self, provider_manager):
