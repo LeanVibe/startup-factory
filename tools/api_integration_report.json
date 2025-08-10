@@ -1,8 +1,8 @@
 {
-  "timestamp": 1752524870.200489,
+  "timestamp": 1754809483.9104152,
   "total_tests": 6,
-  "passed": 6,
-  "failed": 0,
+  "passed": 5,
+  "failed": 1,
   "total_cost_estimate": 0.35325,
   "results": [
     {
@@ -10,42 +10,42 @@
       "status": "PASS",
       "details": "Configuration valid. Test call would cost ~$0.0180",
       "cost_estimate": 0.018000000000000002,
-      "timestamp": 1752524870.200404
+      "timestamp": 1754809483.9102871
     },
     {
       "test_name": "Anthropic Configuration",
       "status": "PASS",
       "details": "Configuration valid. Test call would cost ~$0.0390",
       "cost_estimate": 0.039,
-      "timestamp": 1752524870.2004101
+      "timestamp": 1754809483.910293
     },
     {
       "test_name": "Perplexity Configuration",
       "status": "PASS",
       "details": "Configuration valid. App integration: disabled. Cost per request: $0.005",
       "cost_estimate": 0.005,
-      "timestamp": 1752524870.200415
+      "timestamp": 1754809483.910302
     },
     {
       "test_name": "MVP Orchestrator Compatibility",
-      "status": "PASS",
-      "details": "MVP orchestrator script and project structure compatible",
+      "status": "FAIL",
+      "details": "MVP orchestrator script not found",
       "cost_estimate": 0.0,
-      "timestamp": 1752524870.200454
+      "timestamp": 1754809483.9103591
     },
     {
       "test_name": "Workflow Cost Estimation",
       "status": "PASS",
       "details": "Total cost: $0.29, Budget utilization: 1.9%",
       "cost_estimate": 0.29125,
-      "timestamp": 1752524870.200474
+      "timestamp": 1754809483.910392
     },
     {
       "test_name": "Error Handling Configuration",
       "status": "PASS",
       "details": "Retries: 5, Timeout: 60s, Rate limiting: configured, Concurrency: configured",
       "cost_estimate": 0.0,
-      "timestamp": 1752524870.2004778
+      "timestamp": 1754809483.9103959
     }
   ]
 }

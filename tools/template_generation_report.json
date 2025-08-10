@@ -1,0 +1,110 @@
+{
+  "test_suite": "Template Generation Testing",
+  "timestamp": 1754809483.979655,
+  "template_directory": "/Users/bogdan/work/leanvibe-dev/startup-factory/templates",
+  "summary": {
+    "total_tests": 4,
+    "passed": 2,
+    "failed": 2,
+    "warnings": 0,
+    "total_duration": 0.02473306655883789
+  },
+  "results": [
+    {
+      "test_name": "Template Structure",
+      "status": "FAIL",
+      "details": "Missing required variables: ['project_description']",
+      "duration": 0.00043010711669921875,
+      "metadata": {}
+    },
+    {
+      "test_name": "Cookiecutter Generation",
+      "status": "FAIL",
+      "details": "Project generation incomplete (0/5 checks)",
+      "duration": 0.023287057876586914,
+      "metadata": {}
+    },
+    {
+      "test_name": "Template Customization",
+      "status": "PASS",
+      "details": "All 3 customizations successful",
+      "duration": 0.0006668567657470703,
+      "metadata": {
+        "test_contexts": 3,
+        "successful": 3,
+        "results": [
+          {
+            "name": "Basic SaaS",
+            "success": true,
+            "path": "/var/folders/h4/rhh6b9dd7779n60jjvzcpx580000gn/T/template_test_kmyc1g99/customized/customer-portal"
+          },
+          {
+            "name": "E-commerce",
+            "success": true,
+            "path": "/var/folders/h4/rhh6b9dd7779n60jjvzcpx580000gn/T/template_test_kmyc1g99/customized/shopping-platform"
+          },
+          {
+            "name": "FinTech",
+            "success": true,
+            "path": "/var/folders/h4/rhh6b9dd7779n60jjvzcpx580000gn/T/template_test_kmyc1g99/customized/payment-gateway"
+          }
+        ]
+      }
+    },
+    {
+      "test_name": "Orchestrator Integration",
+      "status": "PASS",
+      "details": "Integration successful with orchestrator data (5/5 checks)",
+      "duration": 0.0003490447998046875,
+      "metadata": {
+        "project_path": "/var/folders/h4/rhh6b9dd7779n60jjvzcpx580000gn/T/template_test_kmyc1g99/orchestrator_integration/ai-writing-assistant",
+        "metadata_fields": 9,
+        "mvp_data_fields": 8,
+        "manifest": {
+          "project_metadata": {
+            "project_name": "AI Writing Assistant",
+            "project_slug": "ai-writing-assistant",
+            "industry": "Content Creation",
+            "category": "B2B SaaS",
+            "problem_statement": "Content creators struggle with writer's block",
+            "solution_approach": "AI-powered writing assistant",
+            "target_audience": "Bloggers and marketers",
+            "tech_stack": "FastAPI, React, PostgreSQL",
+            "created_at": "2025-08-10 10:04:43"
+          },
+          "mvp_data": {
+            "project_id": "test_integration_project",
+            "project_name": "AI Writing Assistant",
+            "industry": "Content Creation",
+            "category": "B2B SaaS",
+            "market_research": {
+              "industry": "Content Creation",
+              "category": "B2B SaaS",
+              "analysis": "Growing market with 15% YoY growth..."
+            },
+            "founder_analysis": {
+              "skills": [
+                "Python",
+                "React",
+                "AI/ML"
+              ],
+              "experience": "5 years software development"
+            },
+            "mvp_spec": {
+              "problem": "Content creators struggle with writer's block",
+              "solution": "AI-powered writing assistant",
+              "target_users": "Bloggers and marketers"
+            },
+            "architecture": {
+              "tech_stack": "FastAPI, React, PostgreSQL",
+              "architecture": "Microservices with API gateway"
+            }
+          },
+          "generated_by": "startup_factory_orchestrator",
+          "version": "1.0.0",
+          "integration_test": true
+        }
+      }
+    }
+  ]
+}

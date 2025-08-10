@@ -1,0 +1,42 @@
+{
+  "test_type": "orchestrator_dry_run",
+  "timestamp": 1754809484.751819,
+  "total_tests": 4,
+  "passed_tests": 1,
+  "total_duration": 0.41053342819213867,
+  "total_cost": 0.04828999999999999,
+  "results": [
+    {
+      "test_name": "Complete Workflow",
+      "success": false,
+      "details": "Workflow failed: name 'useState' is not defined",
+      "duration": 0.41052794456481934,
+      "cost": 0,
+      "timestamp": 1754809484.751771
+    },
+    {
+      "test_name": "Project Generation",
+      "success": false,
+      "details": "Project generation failed: No project ID provided",
+      "duration": 1.1920928955078125e-06,
+      "cost": 0,
+      "timestamp": 1754809484.751782
+    },
+    {
+      "test_name": "Document Management",
+      "success": false,
+      "details": "Document management failed: No project ID provided",
+      "duration": 1.1920928955078125e-06,
+      "cost": 0,
+      "timestamp": 1754809484.7517881
+    },
+    {
+      "test_name": "Cost Tracking",
+      "success": true,
+      "details": "Tracked 5 API calls across 3 providers",
+      "duration": 3.0994415283203125e-06,
+      "cost": 0.04828999999999999,
+      "timestamp": 1754809484.751797
+    }
+  ]
+}

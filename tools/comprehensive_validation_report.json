@@ -1,0 +1,102 @@
+{
+  "report_type": "comprehensive_validation",
+  "generated_at": "2025-08-10 10:04:44",
+  "startup_factory_version": "1.0",
+  "test_environment": "development",
+  "summary": {
+    "timestamp": 1754809484.806608,
+    "total_duration": 2.3327932357788086,
+    "suites_run": 4,
+    "total_tests": 36,
+    "total_passed": 25,
+    "total_failed": 11,
+    "total_warnings": 3,
+    "production_readiness": {
+      "overall_percentage": 62.1,
+      "readiness_level": "NEEDS WORK",
+      "total_weighted_score": 62.1,
+      "total_possible_score": 100,
+      "suite_scores": {
+        "Workflow Validation": {
+          "score": 26.666666666666664,
+          "max_score": 30,
+          "percentage": 88.88888888888889
+        },
+        "API Integration": {
+          "score": 18.75,
+          "max_score": 25,
+          "percentage": 75.0
+        },
+        "Template Generation": {
+          "score": 0,
+          "max_score": 20,
+          "percentage": 0.0
+        },
+        "Orchestrator Dry-Run": {
+          "score": 16.666666666666664,
+          "max_score": 25,
+          "percentage": 66.66666666666666
+        }
+      }
+    },
+    "suite_results": [
+      {
+        "suite_name": "Workflow Validation",
+        "status": "PARTIAL",
+        "duration": 1.4005019664764404,
+        "passed": 8,
+        "failed": 1,
+        "warnings": 1,
+        "details": "Core workflow components validated successfully",
+        "report_file": "workflow_validation_report.json",
+        "error": null
+      },
+      {
+        "suite_name": "API Integration",
+        "status": "PARTIAL",
+        "duration": 0.041033029556274414,
+        "passed": 6,
+        "failed": 2,
+        "warnings": 1,
+        "details": "Most API components validated (6 passed, 2 failed)",
+        "report_file": "api_integration_report.json",
+        "error": null
+      },
+      {
+        "suite_name": "Template Generation",
+        "status": "FAIL",
+        "duration": 0.07000088691711426,
+        "passed": 3,
+        "failed": 4,
+        "warnings": 1,
+        "details": "Template system has critical issues (3 passed, 4 failed)",
+        "report_file": "template_generation_report.json",
+        "error": null
+      },
+      {
+        "suite_name": "Orchestrator Dry-Run",
+        "status": "PARTIAL",
+        "duration": 0.8208367824554443,
+        "passed": 8,
+        "failed": 4,
+        "warnings": 0,
+        "details": "Orchestrator mostly functional (8 passed, 4 failed)",
+        "report_file": "orchestrator_dry_run_report.json",
+        "error": null
+      }
+    ]
+  },
+  "recommendations": [
+    "Validate API integration thoroughly",
+    "Review architecture for missing components",
+    "Fix critical workflow issues first",
+    "Test error handling with real scenarios",
+    "Fix template system configuration and dependencies"
+  ],
+  "next_steps": [
+    "Address all critical failures",
+    "Re-run individual test suites",
+    "Conduct focused debugging",
+    "Re-run comprehensive validation"
+  ]
+}

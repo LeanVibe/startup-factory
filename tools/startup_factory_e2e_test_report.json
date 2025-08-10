@@ -1,0 +1,162 @@
+{
+  "test_suite": "End-to-End Workflow Testing",
+  "timestamp": 1754809108.838562,
+  "dry_run": true,
+  "orchestrator_available": true,
+  "results": [
+    {
+      "test_name": "Script Dependencies",
+      "status": "PASS",
+      "details": "All dependencies and imports successful",
+      "duration": 0.4154388904571533,
+      "cost_estimate": 0.0,
+      "error": null,
+      "metadata": {}
+    },
+    {
+      "test_name": "Configuration Loading",
+      "status": "PASS",
+      "details": "Configuration loaded and validated successfully",
+      "duration": 1.1920928955078125e-05,
+      "cost_estimate": 0.0,
+      "error": null,
+      "metadata": {}
+    },
+    {
+      "test_name": "AI Provider Routing",
+      "status": "PASS",
+      "details": "Provider routing validated for 7 tasks",
+      "duration": 1.2159347534179688e-05,
+      "cost_estimate": 0.0,
+      "error": null,
+      "metadata": {}
+    },
+    {
+      "test_name": "Template Generation",
+      "status": "WARN",
+      "details": "Meta-Fill integration not available, fallback to basic generation",
+      "duration": 0.00025010108947753906,
+      "cost_estimate": 0.0,
+      "error": null,
+      "metadata": {}
+    },
+    {
+      "test_name": "Quality Gates",
+      "status": "PASS",
+      "details": "Quality gate validation successful for 4 gates",
+      "duration": 5.0067901611328125e-06,
+      "cost_estimate": 0.0,
+      "error": null,
+      "metadata": {
+        "gates_validated": [
+          "niche_validation",
+          "problem_solution_fit",
+          "architecture_review",
+          "release_readiness"
+        ]
+      }
+    },
+    {
+      "test_name": "Error Handling",
+      "status": "WARN",
+      "details": "Error handling partial: 3/4 scenarios",
+      "duration": 5.9604644775390625e-06,
+      "cost_estimate": 0.0,
+      "error": null,
+      "metadata": {}
+    },
+    {
+      "test_name": "Cost Tracking",
+      "status": "FAIL",
+      "details": "Cost tracking test failed: E2EWorkflowTester.log_result() got an unexpected keyword argument 'cost_estimate'",
+      "duration": 1.5020370483398438e-05,
+      "cost_estimate": 0.0,
+      "error": "E2EWorkflowTester.log_result() got an unexpected keyword argument 'cost_estimate'",
+      "metadata": {}
+    },
+    {
+      "test_name": "Project Generation",
+      "status": "PASS",
+      "details": "Project generation successful: 5 files created",
+      "duration": 0.0008080005645751953,
+      "cost_estimate": 0.0,
+      "error": null,
+      "metadata": {
+        "project_dir": "/var/folders/h4/rhh6b9dd7779n60jjvzcpx580000gn/T/e2e_test_vjvyay03/generated_project",
+        "generated_files": [
+          "README.md",
+          "requirements.txt",
+          "package.json",
+          "docker-compose.yml",
+          ".env.example"
+        ]
+      }
+    },
+    {
+      "test_name": "Integration Workflow",
+      "status": "PASS",
+      "details": "Integration workflow successful: 7/7 steps",
+      "duration": 4.38690185546875e-05,
+      "cost_estimate": 0.0,
+      "error": null,
+      "metadata": {
+        "success_rate": 1.0,
+        "completed_steps": [
+          "Project Initialization",
+          "Market Research",
+          "Founder Analysis",
+          "MVP Specification",
+          "Architecture Design",
+          "Project Generation",
+          "Quality Validation"
+        ]
+      }
+    },
+    {
+      "test_name": "Happy Path Scenario",
+      "status": "FAIL",
+      "details": "Happy path scenario failed",
+      "duration": 0.0,
+      "cost_estimate": 0.0,
+      "error": "Scenario execution failed",
+      "metadata": {}
+    },
+    {
+      "test_name": "Failure Scenarios",
+      "status": "PASS",
+      "details": "Failure handling successful: 4/4",
+      "duration": 0.0,
+      "cost_estimate": 0.0,
+      "error": null,
+      "metadata": {
+        "scenarios": [
+          [
+            "Invalid API Key",
+            "API authentication failure"
+          ],
+          [
+            "Budget Exceeded",
+            "Cost limit exceeded during workflow"
+          ],
+          [
+            "Template Not Found",
+            "Template generation failure"
+          ],
+          [
+            "Quality Gate Rejection",
+            "Human gate rejection"
+          ]
+        ]
+      }
+    }
+  ],
+  "summary": {
+    "total_tests": 11,
+    "passed": 7,
+    "failed": 2,
+    "skipped": 0,
+    "warnings": 2,
+    "total_duration": 0.41659092903137207,
+    "total_cost_estimate": 0.0
+  }
+}

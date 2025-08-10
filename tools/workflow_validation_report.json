@@ -1,0 +1,111 @@
+{
+  "validation_suite": "Startup Factory Workflow Validation",
+  "timestamp": 1754809483.866143,
+  "summary": {
+    "total_validations": 7,
+    "passed": 7,
+    "failed": 0,
+    "warnings": 0,
+    "total_duration": 1.340916395187378
+  },
+  "results": [
+    {
+      "component": "Script Structure",
+      "test_name": "Core Imports",
+      "status": "PASS",
+      "details": "All core classes importable",
+      "duration": 0.5186371803283691,
+      "metadata": {}
+    },
+    {
+      "component": "AI Provider Routing",
+      "test_name": "Provider Mapping",
+      "status": "PASS",
+      "details": "Valid routing for 7 tasks",
+      "duration": 9.059906005859375e-06,
+      "metadata": {
+        "routing": {
+          "market_research": "perplexity",
+          "founder_analysis": "anthropic",
+          "mvp_specification": "anthropic",
+          "architecture": "anthropic",
+          "code_generation": "openai",
+          "quality_checks": "anthropic",
+          "deployment": "anthropic"
+        }
+      }
+    },
+    {
+      "component": "Configuration",
+      "test_name": "Structure Validation",
+      "status": "PASS",
+      "details": "All required fields present",
+      "duration": 6.9141387939453125e-06,
+      "metadata": {
+        "required_fields": 6,
+        "cost_fields": 5
+      }
+    },
+    {
+      "component": "Template System",
+      "test_name": "System Validation",
+      "status": "PASS",
+      "details": "Template system functional, meta-fill: unavailable",
+      "duration": 0.023406028747558594,
+      "metadata": {
+        "template_dir": "/Users/bogdan/work/leanvibe-dev/startup-factory/templates",
+        "neoforge_available": true,
+        "meta_fill_status": "unavailable"
+      }
+    },
+    {
+      "component": "Quality Gates",
+      "test_name": "Gate Implementation",
+      "status": "PASS",
+      "details": "Quality gates implemented: 4 gates, 4 statuses",
+      "duration": 0.4004201889038086,
+      "metadata": {
+        "gates": [
+          "niche_validation",
+          "problem_solution_fit",
+          "architecture_review",
+          "release_readiness"
+        ],
+        "statuses": [
+          "pending",
+          "approved",
+          "rejected",
+          "revision_needed"
+        ]
+      }
+    },
+    {
+      "component": "Cost Tracking",
+      "test_name": "Cost Calculation",
+      "status": "PASS",
+      "details": "Cost tracking functional: $0.0720 total",
+      "duration": 1.4066696166992188e-05,
+      "metadata": {
+        "total_cost": 0.07200000000000001,
+        "cost_breakdown": {
+          "openai": 0.025,
+          "anthropic": 0.041999999999999996,
+          "perplexity": 0.005
+        },
+        "scenarios_tested": 3
+      }
+    },
+    {
+      "component": "Error Handling",
+      "test_name": "Implementation",
+      "status": "PASS",
+      "details": "Error handling implemented: retries: 3, timeout: 30s",
+      "duration": 0.3984229564666748,
+      "metadata": {
+        "max_retries": 3,
+        "timeout": 30,
+        "api_manager_available": true
+      }
+    }
+  ]
+}
