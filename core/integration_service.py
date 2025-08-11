@@ -27,8 +27,9 @@ except ImportError as e:
     print("Install with: pip install rich")
     exit(1)
 
-# Import all core services
+# Import all core services (handle both package and standalone contexts)
 try:
+    # Try relative imports first (when used as package)
     from .conversation_service import ConversationService, BusinessBlueprint
     from .code_generation_service import CodeGenerationService, CodeArtifact
     from .orchestration_service import OrchestrationService, WorkflowStage
@@ -36,10 +37,22 @@ try:
     from .multi_tenant_service import MultiTenantService, ResourceLimits
     from .ai_orchestration_service import AIOrchestrationService, AITask, TaskType, TaskPriority
     from .observability_service import ObservabilityService, MetricType
-except ImportError as e:
-    print(f"Missing core service dependency: {e}")
-    print("Ensure all core services are properly implemented")
-    exit(1)
+except ImportError:
+    # Fallback to absolute imports (when used as standalone)
+    try:
+        import sys
+        sys.path.append(str(Path(__file__).parent))
+        from conversation_service import ConversationService, BusinessBlueprint
+        from code_generation_service import CodeGenerationService, CodeArtifact
+        from orchestration_service import OrchestrationService, WorkflowStage
+        from deployment_service import DeploymentService, DeploymentConfig, CloudProvider
+        from multi_tenant_service import MultiTenantService, ResourceLimits
+        from ai_orchestration_service import AIOrchestrationService, AITask, TaskType, TaskPriority
+        from observability_service import ObservabilityService, MetricType
+    except ImportError as e:
+        print(f"Missing core service dependency: {e}")
+        print("Ensure all core services are properly implemented")
+        exit(1)
 
 console = Console()
 logger = logging.getLogger(__name__)
