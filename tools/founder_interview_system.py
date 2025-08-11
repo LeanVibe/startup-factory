@@ -129,9 +129,9 @@ class FounderInterviewAgent:
         if api_key:
             return anthropic.Anthropic(api_key=api_key)
         
-        # Graceful fallback for demo mode
-        console.print("[yellow]⚠️  No API key found. Running in demo mode.[/yellow]")
-        console.print("For full functionality, set ANTHROPIC_API_KEY environment variable.")
+        # Graceful fallback with intelligent business analysis
+        console.print("[yellow]⚠️  No API key found. Using intelligent business analysis fallbacks.[/yellow]")
+        console.print("For full AI conversation features, set ANTHROPIC_API_KEY environment variable.")
         return None
         
     async def conduct_interview(self) -> BusinessBlueprint:
@@ -307,6 +307,10 @@ class FounderInterviewAgent:
     
     async def _generate_problem_followups(self, problem_desc: str, target_audience: str) -> List[str]:
         """Use AI to generate intelligent follow-up questions about the problem"""
+        if not self.client:
+            # Enhanced intelligent fallback based on business intelligence
+            return await self._intelligent_problem_followups(problem_desc, target_audience)
+        
         prompt = f"""
         A founder is describing their startup problem:
         Problem: {problem_desc}
@@ -315,17 +319,22 @@ class FounderInterviewAgent:
         Generate 3-4 intelligent follow-up questions that will help understand:
         1. Existing solutions and their limitations
         2. Evidence of problem validation
-        3. Specific use cases or scenarios
+        3. Industry-specific challenges and compliance requirements
+        4. Specific use cases or scenarios
         
         Return only the questions, one per line, without numbering.
         Keep questions conversational and founder-friendly.
+        Focus on business intelligence extraction, not just generic validation.
         """
         
         try:
-            response = self.client.messages.create(
-                model="claude-3-sonnet-20241022",
-                max_tokens=300,
-                messages=[{"role": "user", "content": prompt}]
+            response = await asyncio.create_task(
+                asyncio.to_thread(
+                    self.client.messages.create,
+                    model="claude-3-5-sonnet-20241022",
+                    max_tokens=300,
+                    messages=[{"role": "user", "content": prompt}]
+                )
             )
             
             questions = [q.strip() for q in response.content[0].text.strip().split('\n') if q.strip()]
@@ -333,12 +342,52 @@ class FounderInterviewAgent:
             
         except Exception as e:
             logger.warning(f"AI follow-up generation failed: {e}")
-            # Fallback questions
-            return [
-                "What solutions do people currently use for this problem?",
-                "What's missing or frustrating about existing solutions?",
-                "Can you share a specific example of when this problem occurred?"
+            return await self._intelligent_problem_followups(problem_desc, target_audience)
+    
+    async def _intelligent_problem_followups(self, problem_desc: str, target_audience: str) -> List[str]:
+        """Intelligent fallback for problem follow-up questions with business context awareness"""
+        
+        problem_lower = problem_desc.lower()
+        audience_lower = target_audience.lower()
+        
+        # Industry-specific questions
+        industry_questions = {
+            "healthcare": [
+                "What healthcare regulations or compliance requirements affect this problem?",
+                "How do current medical workflows handle this situation?",
+                "What documentation or audit trails are needed for this process?"
+            ],
+            "fintech": [
+                "What financial regulations impact how this problem can be solved?",
+                "How do users currently handle financial data security for this problem?", 
+                "What compliance frameworks (PCI, SOX, etc.) need to be considered?"
+            ],
+            "education": [
+                "What educational standards or accreditation requirements are relevant?",
+                "How do current educational tools address student privacy (FERPA compliance)?",
+                "What reporting or analytics do educators need for this problem?"
             ]
+        }
+        
+        # Detect industry context
+        questions = []
+        
+        if any(term in problem_lower or term in audience_lower for term in ['health', 'medical', 'doctor', 'patient']):
+            questions.extend(industry_questions["healthcare"])
+        elif any(term in problem_lower or term in audience_lower for term in ['finance', 'financial', 'payment', 'bank', 'money', 'fraud', 'transaction']):
+            questions.extend(industry_questions["fintech"])
+        elif any(term in problem_lower or term in audience_lower for term in ['education', 'learning', 'student', 'school', 'teacher']):
+            questions.extend(industry_questions["education"])
+        else:
+            # Business-intelligent generic questions
+            questions = [
+                "What existing solutions do people use, and what's frustrating about them?", 
+                "Can you walk me through a specific time this problem cost someone time or money?",
+                "What would happen if this problem was never solved?",
+                "Who else in the organization cares about solving this problem?"
+            ]
+        
+        return questions[:4]
     
     async def _design_solution(self, founder: FounderProfile, problem: ProblemStatement) -> SolutionConcept:
         """Guide founder through solution design with AI assistance"""
@@ -402,7 +451,10 @@ class FounderInterviewAgent:
         )
     
     async def _classify_business(self, problem: ProblemStatement, solution: SolutionConcept) -> Tuple[BusinessModel, IndustryVertical]:
-        """Use AI to classify business model and industry vertical"""
+        """Use AI to classify business model and industry vertical with intelligent fallback"""
+        
+        if not self.client:
+            return await self._intelligent_business_classification(problem, solution)
         
         classification_prompt = f"""
         Analyze this startup and classify its business model and industry:
@@ -436,10 +488,13 @@ class FounderInterviewAgent:
         """
         
         try:
-            response = self.client.messages.create(
-                model="claude-3-sonnet-20241022",
-                max_tokens=50,
-                messages=[{"role": "user", "content": classification_prompt}]
+            response = await asyncio.create_task(
+                asyncio.to_thread(
+                    self.client.messages.create,
+                    model="claude-3-5-sonnet-20241022",
+                    max_tokens=50,
+                    messages=[{"role": "user", "content": classification_prompt}]
+                )
             )
             
             classification = response.content[0].text.strip()
@@ -448,14 +503,63 @@ class FounderInterviewAgent:
             business_model = BusinessModel(business_model_str.strip())
             industry_vertical = IndustryVertical(industry_str.strip())
             
-            console.print(f"[green]✅ Classified as: {business_model.value} in {industry_vertical.value}[/green]")
+            console.print(f"[green]✅ AI Classified as: {business_model.value} in {industry_vertical.value}[/green]")
             
             return business_model, industry_vertical
             
         except Exception as e:
             logger.warning(f"AI classification failed: {e}")
-            # Fallback classification
-            return BusinessModel.B2B_SAAS, IndustryVertical.GENERAL
+            return await self._intelligent_business_classification(problem, solution)
+    
+    async def _intelligent_business_classification(self, problem: ProblemStatement, solution: SolutionConcept) -> Tuple[BusinessModel, IndustryVertical]:
+        """Intelligent rule-based business classification with context awareness"""
+        
+        # Combine all text for analysis
+        all_text = " ".join([
+            problem.problem_description,
+            problem.target_audience,
+            solution.core_value_proposition,
+            " ".join(solution.key_features),
+            solution.monetization_strategy
+        ]).lower()
+        
+        # Industry classification
+        industry_vertical = IndustryVertical.GENERAL
+        
+        industry_keywords = {
+            IndustryVertical.HEALTHCARE: ['health', 'medical', 'doctor', 'patient', 'hospital', 'clinic', 'healthcare', 'hipaa', 'medical records'],
+            IndustryVertical.FINTECH: ['finance', 'payment', 'bank', 'money', 'transaction', 'financial', 'investing', 'trading', 'lending'],
+            IndustryVertical.EDUCATION: ['education', 'learning', 'student', 'school', 'teacher', 'curriculum', 'training', 'course'],
+            IndustryVertical.REAL_ESTATE: ['property', 'real estate', 'housing', 'rental', 'lease', 'mortgage', 'property management'],
+            IndustryVertical.LOGISTICS: ['shipping', 'delivery', 'logistics', 'supply chain', 'warehouse', 'transportation', 'fulfillment'],
+            IndustryVertical.MEDIA: ['content', 'media', 'publishing', 'entertainment', 'video', 'streaming', 'social media']
+        }
+        
+        # Find best industry match
+        max_matches = 0
+        for vertical, keywords in industry_keywords.items():
+            matches = sum(1 for keyword in keywords if keyword in all_text)
+            if matches > max_matches:
+                max_matches = matches
+                industry_vertical = vertical
+        
+        # Business model classification
+        business_model = BusinessModel.B2C_SAAS  # Default
+        
+        if any(term in all_text for term in ['business', 'enterprise', 'company', 'organization', 'b2b']):
+            business_model = BusinessModel.B2B_SAAS
+        elif any(term in all_text for term in ['marketplace', 'platform', 'connect', 'two-sided']):
+            business_model = BusinessModel.MARKETPLACE
+        elif any(term in all_text for term in ['ecommerce', 'shop', 'store', 'product', 'selling']):
+            business_model = BusinessModel.ECOMMERCE
+        elif any(term in all_text for term in ['content', 'publishing', 'media', 'blog']):
+            business_model = BusinessModel.CONTENT_PLATFORM
+        elif any(term in all_text for term in ['service', 'consulting', 'professional services']):
+            business_model = BusinessModel.SERVICE_BUSINESS
+        
+        console.print(f"[cyan]🧠 Intelligent Classification: {business_model.value} in {industry_vertical.value}[/cyan]")
+        
+        return business_model, industry_vertical
     
     async def _generate_technical_specs(self, blueprint: BusinessBlueprint):
         """Generate technical specifications from business blueprint using AI"""

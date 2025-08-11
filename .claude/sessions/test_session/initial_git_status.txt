@@ -1,0 +1,4 @@
+ M worktrees/track-a-core
+ M worktrees/track-b-templates
+ M worktrees/track-d-production
+?? .claude/sessions/

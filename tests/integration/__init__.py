@@ -1,0 +1,1 @@
+# Integration tests for Startup Factory 8-service architecture

@@ -1,0 +1,43 @@
+{
+  "services": [
+    {
+      "type": "web",
+      "name": "mvp-c7c4d7ae-backend",
+      "env": "python",
+      "buildCommand": "pip install -r requirements.txt",
+      "startCommand": "uvicorn main:app --host 0.0.0.0 --port $PORT",
+      "healthCheckPath": "/health",
+      "envVars": [
+        {
+          "key": "DATABASE_URL",
+          "sync": false
+        },
+        {
+          "key": "ENVIRONMENT",
+          "value": "production"
+        }
+      ]
+    },
+    {
+      "type": "web",
+      "name": "mvp-c7c4d7ae-frontend",
+      "env": "static",
+      "buildCommand": "npm install && npm run build",
+      "staticPublishPath": "./build",
+      "routes": [
+        {
+          "type": "rewrite",
+          "source": "/*",
+          "destination": "/index.html"
+        }
+      ]
+    }
+  ],
+  "databases": [
+    {
+      "name": "mvp-c7c4d7ae-db",
+      "databaseName": "mvp_db",
+      "user": "user"
+    }
+  ]
+}
