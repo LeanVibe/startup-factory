@@ -11,6 +11,7 @@ and generating comprehensive product specifications.
 import asyncio
 import json
 import logging
+import os
 from datetime import datetime
 from dataclasses import dataclass, field
 from enum import Enum
@@ -118,9 +119,20 @@ class BusinessBlueprint:
 class FounderInterviewAgent:
     """AI Agent specialized in conducting founder interviews and extracting business intelligence"""
     
-    def __init__(self, anthropic_client: anthropic.Anthropic):
-        self.client = anthropic_client
+    def __init__(self, anthropic_client: Optional[anthropic.Anthropic] = None):
+        self.client = anthropic_client or self._initialize_client()
         self.conversation_history: List[Dict[str, str]] = []
+    
+    def _initialize_client(self) -> Optional[anthropic.Anthropic]:
+        """Initialize Anthropic client with graceful fallback"""
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        if api_key:
+            return anthropic.Anthropic(api_key=api_key)
+        
+        # Graceful fallback for demo mode
+        console.print("[yellow]⚠️  No API key found. Running in demo mode.[/yellow]")
+        console.print("For full functionality, set ANTHROPIC_API_KEY environment variable.")
+        return None
         
     async def conduct_interview(self) -> BusinessBlueprint:
         """Main interview flow that guides founders through business definition"""

@@ -74,14 +74,15 @@ class StartupFactory:
         
         table.add_row("1", "🎯 Full Day One Experience", "25 min")
         table.add_row("2", "🤖 Founder Interview Only", "15 min") 
-        table.add_row("3", "📊 System Status Check", "1 min")
-        table.add_row("4", "🎥 Show Demonstration", "5 min")
-        table.add_row("5", "❌ Exit", "")
+        table.add_row("3", "🎬 Interactive Demo (with real MVP generation)", "10 min")
+        table.add_row("4", "📊 System Status Check", "1 min")
+        table.add_row("5", "🎥 Show Demonstration", "5 min")
+        table.add_row("6", "❌ Exit", "")
         
         console.print("\n[bold]Choose your experience:[/bold]")
         console.print(table)
         
-        choice = input("\nSelect option (1-5): ").strip()
+        choice = input("\nSelect option (1-6): ").strip()
         return choice
     
     async def run_full_experience(self):
@@ -135,6 +136,41 @@ class StartupFactory:
             console.print(f"[red]Error: Founder Interview module not found: {e}[/red]")
         except Exception as e:
             console.print(f"[red]Error during interview: {e}[/red]")
+            raise
+    
+    async def run_interactive_demo(self):
+        """Run the interactive demo with real MVP generation"""
+        
+        console.print("\n[bold blue]🎬 Interactive Demo with Real MVP Generation[/bold blue]")
+        console.print("Experience the complete Startup Factory pipeline with realistic business scenarios.\n")
+        
+        if not Confirm.ask("Ready to see MVPs generated in real-time?"):
+            return
+        
+        try:
+            # Import and run the complete demo
+            from run_complete_demo import run_automated_demo
+            
+            console.print("\n[bold green]🚀 Running Complete MVP Generation Demo...[/bold green]\n")
+            
+            # Run the automated demo
+            results = await run_automated_demo()
+            
+            console.print(f"\n[bold green]🎉 Demo completed successfully![/bold green]")
+            console.print(f"Generated {len(results)} complete MVPs with deployment configurations.")
+            
+            # Show results summary
+            console.print("\n[bold cyan]Generated Projects:[/bold cyan]")
+            for result in results:
+                console.print(f"  • {result['scenario']}: {result['files_created']} files in {result['generation_time']:.2f}s")
+            
+            console.print(f"\n[green]All projects ready for Docker deployment![/green]")
+            console.print("Check the 'demo_generated_mvps' directory to explore the generated code.")
+            
+        except ImportError as e:
+            console.print(f"[red]Error: Demo components not found: {e}[/red]")
+        except Exception as e:
+            console.print(f"[red]Error during demo: {e}[/red]")
             raise
     
     def show_system_status(self):
@@ -302,17 +338,20 @@ async def main():
                 await startup_factory.run_interview_only()
                 break
             elif choice == "3":
-                startup_factory.show_system_status()
+                await startup_factory.run_interactive_demo()
                 input("\nPress Enter to continue...")
             elif choice == "4":
-                startup_factory.show_demonstration()
+                startup_factory.show_system_status()
                 input("\nPress Enter to continue...")
             elif choice == "5":
+                startup_factory.show_demonstration()
+                input("\nPress Enter to continue...")
+            elif choice == "6":
                 console.print("\n[bold blue]Thank you for using Startup Factory![/bold blue]")
                 console.print("Transform your next idea into reality in just 25 minutes.")
                 break
             else:
-                console.print("[red]Invalid option. Please select 1-5.[/red]")
+                console.print("[red]Invalid option. Please select 1-6.[/red]")
                 input("Press Enter to continue...")
                 
     except KeyboardInterrupt:

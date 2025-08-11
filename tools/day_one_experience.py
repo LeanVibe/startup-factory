@@ -65,16 +65,16 @@ class DayOneExperience:
         self.session_start = datetime.now()
         self.progress_log = []
         
-    def _setup_anthropic(self) -> anthropic.Anthropic:
-        """Setup Anthropic client with validation"""
+    def _setup_anthropic(self) -> Optional[anthropic.Anthropic]:
+        """Setup Anthropic client with graceful fallback"""
         api_key = os.getenv("ANTHROPIC_API_KEY")
-        if not api_key:
-            console.print("[red]❌ ANTHROPIC_API_KEY not found[/red]")
-            console.print("Get your key: https://console.anthropic.com/")
-            console.print("Set it: export ANTHROPIC_API_KEY=your_key")
-            exit(1)
+        if api_key:
+            return anthropic.Anthropic(api_key=api_key)
         
-        return anthropic.Anthropic(api_key=api_key)
+        # Graceful fallback for demo mode
+        console.print("[yellow]⚠️  No API key found. Running in demo mode.[/yellow]")
+        console.print("For full functionality, set ANTHROPIC_API_KEY environment variable.")
+        return None
     
     def _setup_docker(self):
         """Setup Docker client with validation"""
