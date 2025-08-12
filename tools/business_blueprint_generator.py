@@ -427,7 +427,7 @@ Authentication endpoints for {blueprint.solution_concept.core_value_proposition}
 Includes business-specific user registration and validation
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
@@ -438,6 +438,12 @@ from app.core.security import verify_password, get_password_hash, create_access_
 from app.db.database import get_db
 from datetime import datetime, timedelta
 import secrets
+import os
+try:
+    import pyotp
+except Exception:
+    pyotp = None
+
 
 router = APIRouter()
 security = HTTPBearer()
@@ -507,7 +513,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/login")
-async def login(email: str, password: str, db: Session = Depends(get_db)):
+async def login(email: str, password: str, totp_code: Optional[str] = None, db: Session = Depends(get_db)):
     """Login user and return access token"""
     
     user = db.query(User).filter(User.email == email).first()
@@ -533,6 +539,13 @@ async def login(email: str, password: str, db: Session = Depends(get_db)):
             detail="Inactive user"
         )
     
+    # If TOTP enabled, require valid code
+    if user.is_totp_enabled:
+        if not pyotp or not user.totp_secret:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="TOTP not available")
+        if not totp_code or not pyotp.TOTP(user.totp_secret).verify(totp_code, valid_window=1):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid TOTP code")
+
     # Reset failed attempts on success
     user.failed_login_attempts = 0
     db.add(user); db.commit(); db.refresh(user)
@@ -540,6 +553,22 @@ async def login(email: str, password: str, db: Session = Depends(get_db)):
     access_token = create_access_token(data={"sub": user.email})
     refresh_token = create_refresh_token(data={"sub": user.email, "jti": secrets.token_hex(8)})
     
+    # Optional cookie mode
+    if os.getenv('AUTH_COOKIE') in ('1','true','yes'):
+        resp = Response()
+        resp.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=False,
+            samesite="lax",
+            max_age=60*60
+        )
+        # CSRF token for forms
+        import secrets as _secrets
+        resp.set_cookie("csrf_token", _secrets.token_hex(16), httponly=False, secure=False, samesite="lax")
+        return resp
+
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
@@ -553,7 +582,7 @@ async def refresh(refresh_token: str):
     payload = decode_token(refresh_token)
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
-    # naive rotation: issue new refresh with new jti; blacklist old jti (in-memory placeholder)
+    # rotation placeholder; consider blacklist store integration
     new_access = create_access_token(data={"sub": payload.get("sub")})
     new_refresh = create_refresh_token(data={"sub": payload.get("sub"), "jti": secrets.token_hex(8)})
     return {"access_token": new_access, "refresh_token": new_refresh, "token_type": "bearer"}
