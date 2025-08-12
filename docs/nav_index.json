@@ -1,15 +1,15 @@
 {
   "meta": {
     "repo_path": "/Users/bogdan/work/leanvibe-dev/startup-factory",
-    "generated_at": "2025-08-12 11:09:04 +0300",
-    "total_files_estimated": 1237,
+    "generated_at": "2025-08-12 11:47:09 +0300",
+    "total_files_estimated": 1235,
     "total_dirs_estimated": 304
   },
   "root": {
-    "name": "startup-factory",
+    "name": "",
     "path": ".",
     "type": "dir",
-    "file_count": 57,
+    "file_count": 55,
     "dir_count": 21,
     "ext_counts": {
       ".py": 28,
@@ -19,7 +19,6 @@
       ".txt": 3,
       ".yaml": 3,
       ".example": 2,
-      ".html": 2,
       ".ini": 1,
       ".json": 1,
       ".template": 1,
@@ -11307,18 +11306,6 @@
         "path": "TRANSFORMATION_COMPLETE.md",
         "type": "file",
         "ext": ".md"
-      },
-      {
-        "name": "validation_dashboard_dashboard_47440155.html",
-        "path": "validation_dashboard_dashboard_47440155.html",
-        "type": "file",
-        "ext": ".html"
-      },
-      {
-        "name": "validation_dashboard_dashboard_f82943b8.html",
-        "path": "validation_dashboard_dashboard_f82943b8.html",
-        "type": "file",
-        "ext": ".html"
       }
     ]
   }

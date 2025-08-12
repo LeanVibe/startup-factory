@@ -1,7 +1,7 @@
 # Repository Navigation Index
 
-- Generated: 2025-08-12 11:09:04 +0300
-- Approx. files: 1237 | dirs: 304
+- Generated: 2025-08-12 11:47:09 +0300
+- Approx. files: 1235 | dirs: 304
 
 ## Top-level
 
@@ -83,8 +83,6 @@
 | TRACK_C_PROGRESS_SUMMARY.md | file | 1 | 0 | .md |  |
 | TRACK_D_FINAL_REPORT.md | file | 1 | 0 | .md |  |
 | TRANSFORMATION_COMPLETE.md | file | 1 | 0 | .md |  |
-| validation_dashboard_dashboard_47440155.html | file | 1 | 0 | .html |  |
-| validation_dashboard_dashboard_f82943b8.html | file | 1 | 0 | .html |  |
 
 ## Tree (depth-limited)
 
