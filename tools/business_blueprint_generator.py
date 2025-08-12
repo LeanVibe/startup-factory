@@ -419,7 +419,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from app.models.user import User, UserCreate, UserResponse
-from app.core.security import verify_password, get_password_hash, create_access_token
+from app.core.security import verify_password, get_password_hash, create_access_token, create_refresh_token, decode_token
 from app.db.database import get_db
 
 router = APIRouter()
@@ -506,12 +506,23 @@ async def login(email: str, password: str, db: Session = Depends(get_db)):
         )
     
     access_token = create_access_token(data={"sub": user.email})
+    refresh_token = create_refresh_token(data={"sub": user.email})
     
     return {
         "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
         "user": UserResponse.from_orm(user)
     }
+
+
+@router.post("/refresh")
+async def refresh(refresh_token: str):
+    payload = decode_token(refresh_token)
+    if not payload or payload.get("type") != "refresh":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+    new_access = create_access_token(data={"sub": payload.get("sub")})
+    return {"access_token": new_access, "token_type": "bearer"}
 
 
 async def get_current_user(
