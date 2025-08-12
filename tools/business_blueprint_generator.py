@@ -2097,6 +2097,14 @@ class {blueprint.business_model.value.replace('_', '').title()}BusinessLogic:
         # Generate docker-compose configuration
         docker_compose = self._generate_docker_compose(blueprint)
         artifacts.append(docker_compose)
+
+        # Generate CI workflow for smoke tests
+        ci_workflow = self._generate_ci_smoke_workflow(blueprint)
+        artifacts.append(ci_workflow)
+
+        # Generate local smoke script
+        smoke_script = self._generate_smoke_script(blueprint)
+        artifacts.append(smoke_script)
         
         # Deployer skeleton manifests/messages
         base_deployer = CodeArtifact(
@@ -2295,6 +2303,64 @@ volumes:
             file_path="docker-compose.yml",
             content=compose_content,
             description="Docker Compose configuration"
+        )
+
+    def _generate_ci_smoke_workflow(self, blueprint: BusinessBlueprint) -> CodeArtifact:
+        """Generate a minimal GitHub Actions workflow to smoke test the project"""
+        yml = f'''name: Smoke Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start services
+        run: |
+          docker-compose up -d
+          sleep 10
+          docker-compose exec -T web python -m alembic upgrade head || true
+
+      - name: Wait for health
+        run: |
+          for i in $(seq 1 30); do \
+            curl -fsS http://localhost:8000/health && break || sleep 2; \
+          done
+
+      - name: Run smoke script
+        run: bash scripts/smoke.sh
+'''
+        return CodeArtifact(
+            file_path=".github/workflows/smoke.yml",
+            content=yml,
+            description="CI workflow for smoke testing"
+        )
+
+    def _generate_smoke_script(self, blueprint: BusinessBlueprint) -> CodeArtifact:
+        """Generate a simple curl-based smoke test script"""
+        script = f'''#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🔎 Hitting health endpoints"
+curl -fsS http://localhost:8000/health
+curl -fsS http://localhost:8000/api/health || true
+
+echo "🔎 Checking API docs"
+curl -fsS http://localhost:8000/docs >/dev/null || true
+
+echo "✅ Smoke test completed"
+'''
+        return CodeArtifact(
+            file_path="scripts/smoke.sh",
+            content=script,
+            description="Local smoke test script"
         )
     
     async def _generate_documentation(self, blueprint: BusinessBlueprint) -> List[CodeArtifact]:

@@ -115,7 +115,7 @@ class StreamlinedOrchestrator:
         conflicts: list[tuple[str, str]] = []
         
         with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
-            task = progress.add_task("Creating project structure...", total=len(artifacts) + 2)
+            task = progress.add_task("Creating project structure...", total=len(artifacts) + 3)
             
             # Create directory structure
             (project_path / "backend" / "app" / "models").mkdir(parents=True, exist_ok=True)
@@ -149,6 +149,17 @@ class StreamlinedOrchestrator:
             
             # Generate essential config files
             await self._generate_essential_configs(project_path, blueprint)
+            progress.advance(task)
+
+            # Write CI smoke workflow and scripts if present in artifacts
+            smoke = [a for a in artifacts if a.file_path.startswith('.github/') or a.file_path.startswith('scripts/')]
+            for artifact in smoke:
+                p = project_path / artifact.file_path
+                p.parent.mkdir(parents=True, exist_ok=True)
+                with open(p, 'w') as f:
+                    f.write(artifact.content)
+                if p.name.endswith('.sh'):
+                    p.chmod(0o755)
             progress.advance(task)
         
         console.print(f"[green]✅ Project created at: {project_path}[/green]")
