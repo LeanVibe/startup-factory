@@ -1654,6 +1654,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy backend application
 COPY backend/ ./backend/
 COPY --from=frontend-builder /app/frontend/dist ./static/
+COPY alembic.ini ./alembic.ini
+COPY alembic/ ./alembic/
 
 # Change ownership to app user
 RUN chown -R appuser:appuser /app
@@ -1700,6 +1702,9 @@ services:
       - redis
     volumes:
       - ./logs:/app/logs
+      - ./backend:/app/backend
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
     restart: unless-stopped
     
   db:

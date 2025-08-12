@@ -193,7 +193,7 @@ alembic==1.12.1
 # Environment Configuration
 
 # Database
-DATABASE_URL=postgresql://postgres:password@localhost:5432/{blueprint.project_id.replace('-', '_')}
+DATABASE_URL=postgresql://postgres:password@db:5432/{blueprint.project_id.replace('-', '_')}
 
 # Security
 SECRET_KEY=your-super-secret-key-change-in-production
