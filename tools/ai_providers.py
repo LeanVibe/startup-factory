@@ -25,7 +25,11 @@ except ImportError:  # Keep module import-safe without OpenAI installed
     openai = None
 from anthropic import Anthropic
 
-from .core_types import Task, TaskResult, TaskType, ProviderError
+# Support both package and module imports for test flexibility
+try:
+    from .core_types import Task, TaskResult, TaskType, ProviderError
+except Exception:  # pragma: no cover - fallback for non-package import context
+    from core_types import Task, TaskResult, TaskType, ProviderError
 
 logger = logging.getLogger(__name__)
 
