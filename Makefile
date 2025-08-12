@@ -1,5 +1,5 @@
 # Startup Factory - Main Makefile
-.PHONY: help init dev test clean lint deploy health setup-production validate-production validate-templates validate-templates-ci template-regression-test template-benchmark reindex doc-check
+.PHONY: help init dev test test-unit clean lint deploy health setup-production validate-production validate-templates validate-templates-ci template-regression-test template-benchmark reindex doc-check
 
 # Default target shows help
 help: ## Show this help message
@@ -25,6 +25,10 @@ test: ## Run all tests (analytics, production, integration, templates)
 	@python -m pytest tests/production/ -v --tb=short
 	@python -m pytest tests/templates/ -v --tb=short
 	@echo "✅ All tests completed"
+
+test-unit: ## Run fast unit tests only
+	@echo "Running fast unit tests..."
+	@python -m pytest tests/unit -q
 
 test-analytics: ## Run analytics engine tests only  
 	@python -m pytest tests/analytics/test_analytics_engine.py -v
