@@ -8,7 +8,7 @@ import asyncio
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, UTC
 from enum import Enum
 from typing import Dict, List, Optional, Any
 
@@ -29,6 +29,8 @@ class TaskType(str, Enum):
     FOUNDER_ANALYSIS = "founder_analysis"
     MVP_SPECIFICATION = "mvp_specification"
     ARCHITECTURE_DESIGN = "architecture_design"
+    # Alias to maintain backward/test compatibility
+    ARCHITECTURE = "architecture_design"
     CODE_GENERATION = "code_generation"
     TESTING = "testing"
     DEPLOYMENT = "deployment"
@@ -97,8 +99,8 @@ class StartupInstance:
     resource_allocation: ResourceAllocation
     current_phase: int
     state: Dict[str, Any] = field(default_factory=dict)
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     error_count: int = 0
     last_error: Optional[str] = None
 
@@ -117,7 +119,7 @@ class Task:
     provider_preference: Optional[str] = None
     retry_count: int = 0
     max_retries: int = 3
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass
@@ -132,7 +134,7 @@ class TaskResult:
     execution_time_seconds: float
     tokens_used: Optional[int] = None
     quality_score: Optional[float] = None
-    completed_at: datetime = field(default_factory=datetime.utcnow)
+    completed_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     error_message: Optional[str] = None
 
 
