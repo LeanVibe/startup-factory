@@ -30,6 +30,33 @@ test-unit: ## Run fast unit tests only
 	@echo "Running fast unit tests..."
 	@python -m pytest tests/unit -q
 
+.PHONY: smoke-generate
+smoke-generate: ## Generate scaffold artifacts (no Docker)
+	@python - << 'PY'
+import asyncio
+from tools.founder_interview_system import FounderProfile, ProblemStatement, SolutionConcept, BusinessBlueprint, BusinessModel, IndustryVertical
+from tools.business_blueprint_generator import BusinessLogicGenerator
+
+async def main():
+    gen = BusinessLogicGenerator(anthropic_client=None)
+    bp = BusinessBlueprint(
+        founder_profile=FounderProfile(name="CI Smoke"),
+        problem_statement=ProblemStatement(problem_description="Test", target_audience="CI"),
+        solution_concept=SolutionConcept(core_value_proposition="CI MVP", key_features=["Dashboard"], user_journey=["onboarding"], differentiation_factors=[], success_metrics=["Signups"], monetization_strategy="subscription"),
+        business_model=BusinessModel.B2B_SAAS,
+        industry_vertical=IndustryVertical.GENERAL,
+        project_id="startup_ci_smoke",
+    )
+    artifacts = await gen.generate_mvp_code(bp)
+    required = {"backend/app/main.py","backend/app/db/database.py","frontend/index.html","alembic/env.py","docker-compose.yml","Dockerfile"}
+    present = {a.file_path for a in artifacts}
+    missing = required - present
+    assert not missing, f"Missing artifacts: {sorted(missing)}"
+    print("✅ Scaffold smoke OK")
+
+asyncio.run(main())
+PY
+
 test-analytics: ## Run analytics engine tests only  
 	@python -m pytest tests/analytics/test_analytics_engine.py -v
 
