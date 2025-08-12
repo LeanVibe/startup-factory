@@ -215,6 +215,16 @@ class StartupFactory:
             
             status_table.add_row(f"Module: {module}", module_status, "Core system component")
         
+        # Provider health (if available)
+        try:
+            from tools.ai_providers import create_default_provider_manager
+            provider_manager = create_default_provider_manager()
+            providers = provider_manager.get_available_providers()
+            for p in providers:
+                status_table.add_row(f"AI Provider: {p}", "✅ Registered", "Single-provider strategy")
+        except Exception:
+            status_table.add_row("AI Provider Manager", "❌ Error", "Unable to load provider manager")
+
         console.print(status_table)
         
         # System summary
