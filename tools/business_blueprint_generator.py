@@ -714,28 +714,38 @@ async def delete_{entity_lower}(
                 description=f"Package init for {pkg}"
             ))
 
-        # FastAPI app entrypoint
-        main_py = f'''from fastapi import FastAPI
+        # FastAPI app entrypoint with security middlewares
+        main_py = f'''from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.main import api_router
+from app.core.config import settings
+from app.middleware.security import SecurityHeadersMiddleware, RequestSizeLimitMiddleware, AuditLogMiddleware
+from app.middleware.rate_limit import RateLimitMiddleware
 
 
 def create_app() -> FastAPI:
     app = FastAPI(title="{blueprint.project_id}", version="1.0.0")
-    app.include_router(api_router, prefix="/api")
 
+    # Security / rate limiting
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(RequestSizeLimitMiddleware, max_body_bytes=settings.max_request_body_bytes)
+    app.add_middleware(AuditLogMiddleware)
+    app.add_middleware(RateLimitMiddleware, requests=settings.rate_limit_requests, window_seconds=settings.rate_limit_window_seconds)
+
+    # CORS
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=settings.cors_allow_origins,
         allow_credentials=True,
-        allow_methods=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
 
     @app.get("/health")
-    async def health():
+    async def health(_: Request):
         return {{"status": "healthy"}}
 
+    app.include_router(api_router, prefix="/api")
     return app
 
 
