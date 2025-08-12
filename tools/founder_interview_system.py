@@ -307,6 +307,30 @@ class FounderInterviewAgent:
     
     async def _generate_problem_followups(self, problem_desc: str, target_audience: str) -> List[str]:
         """Use AI to generate intelligent follow-up questions about the problem"""
+        # Prefer provider manager; fallback to direct client or rule-based
+        try:
+            from tools.ai_providers import create_default_provider_manager
+            from tools.core_types import Task, TaskType, generate_task_id
+            provider_manager = create_default_provider_manager()
+            task = Task(
+                id=generate_task_id(),
+                startup_id="interview",
+                type=TaskType.FOUNDER_ANALYSIS,
+                description="Generate intelligent follow-up questions",
+                prompt=(
+                    f"Founder problem: {problem_desc}\n"
+                    f"Target audience: {target_audience}\n\n"
+                    "Generate 3-4 intelligent follow-up questions that cover existing solutions, validation, compliance, and concrete scenarios. One per line."
+                ),
+                max_tokens=300,
+            )
+            result = await provider_manager.process_task(task)
+            if result.success and result.content:
+                qs = [q.strip() for q in result.content.strip().split('\n') if q.strip()]
+                return qs[:4]
+        except Exception:
+            pass
+
         if not self.client:
             # Enhanced intelligent fallback based on business intelligence
             return await self._intelligent_problem_followups(problem_desc, target_audience)
@@ -453,6 +477,35 @@ class FounderInterviewAgent:
     async def _classify_business(self, problem: ProblemStatement, solution: SolutionConcept) -> Tuple[BusinessModel, IndustryVertical]:
         """Use AI to classify business model and industry vertical with intelligent fallback"""
         
+        # Prefer provider manager; fallback to client then rule-based
+        try:
+            from tools.ai_providers import create_default_provider_manager
+            from tools.core_types import Task, TaskType, generate_task_id
+            provider_manager = create_default_provider_manager()
+            prompt = (
+                f"Analyze and classify business model + industry.\n"
+                f"Problem: {problem.problem_description}\n"
+                f"Target Audience: {problem.target_audience}\n"
+                f"Solution: {solution.core_value_proposition}\n"
+                f"Key Features: {', '.join(solution.key_features)}\n"
+                f"Monetization: {solution.monetization_strategy}\n\n"
+                "Return 'business_model,industry_vertical' (e.g., b2b_saas,healthcare)."
+            )
+            task = Task(
+                id=generate_task_id(),
+                startup_id="interview",
+                type=TaskType.MVP_SPECIFICATION,
+                description="Classify business model and industry",
+                prompt=prompt,
+                max_tokens=50,
+            )
+            result = await provider_manager.process_task(task)
+            if result.success and result.content and ',' in result.content:
+                bm_str, ind_str = [s.strip() for s in result.content.split(',', 1)]
+                return BusinessModel(bm_str), IndustryVertical(ind_str)
+        except Exception:
+            pass
+
         if not self.client:
             return await self._intelligent_business_classification(problem, solution)
         
