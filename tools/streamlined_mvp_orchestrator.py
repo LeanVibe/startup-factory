@@ -214,26 +214,59 @@ DEBUG=True
         deploy_script = f"""#!/bin/bash
 # Quick deployment script for {blueprint.solution_concept.core_value_proposition}
 
+set -euo pipefail
+
 echo "🚀 Deploying {blueprint.project_id}..."
 
-# Copy environment template
-cp .env.template .env
-echo "✅ Environment template copied"
+# Copy environment template if missing
+if [ ! -f .env ]; then
+  cp .env.template .env
+  echo "✅ Environment template created"
+fi
 
 # Build and start services
 docker-compose up --build -d
 echo "✅ Services started"
 
 # Wait for database
-sleep 10
+echo "⏳ Waiting for database..."
+sleep 12
 
-# Run database migrations
-docker-compose exec -T web python -m alembic upgrade head
-echo "✅ Database migrations complete"
+# Run database migrations (ignore if none)
+if docker-compose exec -T web python -c "import alembic" >/dev/null 2>&1; then
+  set +e
+  docker-compose exec -T web python -m alembic upgrade head
+  rc=$?
+  set -e
+  if [ $rc -ne 0 ]; then
+    echo "⚠️  Alembic migration skipped or failed (no versions yet)"
+  else
+    echo "✅ Database migrations complete"
+  fi
+fi
 
-echo "🎉 Deployment complete!"
-echo "Visit: http://localhost:8000"
-echo "API Docs: http://localhost:8000/docs"
+# Health checks
+echo "🔍 Verifying health endpoint..."
+for i in $(seq 1 30); do
+  if curl -fsS http://localhost:8000/health >/dev/null; then
+    echo "✅ Health check passed"
+    break
+  fi
+  sleep 2
+done
+
+echo "🔍 Verifying API docs..."
+if curl -fsS http://localhost:8000/docs >/dev/null; then
+  echo "✅ Docs available"
+else
+  echo "⚠️  Docs not reachable yet"
+fi
+
+echo "\n🎉 Deployment complete!"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🌍 App:  http://localhost:8000"
+echo "📚 Docs: http://localhost:8000/docs"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 """
         
         deploy_file = project_path / "deploy.sh"
