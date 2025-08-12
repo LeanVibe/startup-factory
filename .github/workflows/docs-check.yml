@@ -1,0 +1,31 @@
+name: Docs Check
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Reindex repository navigation
+        run: |
+          make reindex
+
+      - name: Ensure index committed or unchanged
+        run: |
+          git status --porcelain
+          # Fail if reindex changed files (enforce up-to-date index in PR)
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "docs index out of date. Run: make reindex" >&2
+            git diff -- docs/NAV_INDEX.md docs/nav_index.json || true
+            exit 1
+          fi
