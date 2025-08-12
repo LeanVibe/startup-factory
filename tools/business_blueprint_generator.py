@@ -55,7 +55,8 @@ class BusinessLogicGenerator:
         artifacts = []
         
         with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
-            task = progress.add_task("Generating business logic...", total=6)
+            # Increase total to include scaffolding and frontend shell
+            task = progress.add_task("Generating business logic...", total=9)
             
             # 1. Generate data models with business-specific fields
             progress.update(task, description="Creating data models...")
@@ -63,6 +64,12 @@ class BusinessLogicGenerator:
             artifacts.extend(models)
             progress.advance(task)
             
+            # 1.1 Backend scaffold (app entrypoint, DB, security, config, packages)
+            progress.update(task, description="Creating backend scaffold...")
+            backend_scaffold = await self._generate_backend_scaffold(blueprint)
+            artifacts.extend(backend_scaffold)
+            progress.advance(task)
+
             # 2. Generate business logic API endpoints
             progress.update(task, description="Building API endpoints...")
             api_endpoints = await self._generate_api_endpoints(blueprint)
@@ -86,11 +93,23 @@ class BusinessLogicGenerator:
             deployment_configs = await self._generate_deployment_config(blueprint)
             artifacts.extend(deployment_configs)
             progress.advance(task)
+
+            # 5.1 Alembic migrations scaffold
+            progress.update(task, description="Preparing database migrations...")
+            alembic_scaffold = await self._generate_alembic_scaffold(blueprint)
+            artifacts.extend(alembic_scaffold)
+            progress.advance(task)
             
             # 6. Generate README and documentation
             progress.update(task, description="Creating documentation...")
             documentation = await self._generate_documentation(blueprint)
             artifacts.extend(documentation)
+            progress.advance(task)
+
+            # 7. Frontend shell (mount components and basic layout)
+            progress.update(task, description="Creating frontend shell...")
+            frontend_shell = await self._generate_frontend_shell(blueprint)
+            artifacts.extend(frontend_shell)
             progress.advance(task)
         
         console.print(f"[green]✅ Generated {len(artifacts)} code artifacts[/green]")
@@ -153,12 +172,10 @@ Generated for: {blueprint.solution_concept.core_value_proposition}
 """
 
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float
-from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, EmailStr
-
-Base = declarative_base()
+from app.db.database import Base
 
 
 class User(Base):
@@ -269,12 +286,10 @@ Generated from business blueprint
 """
 
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float
-from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel
-
-Base = declarative_base()
+from app.db.database import Base
 
 
 class {entity_name}(Base):
@@ -680,6 +695,282 @@ async def delete_{entity_lower}(
             dependencies=["fastapi", "sqlalchemy"],
             is_business_logic=True
         )
+
+    async def _generate_backend_scaffold(self, blueprint: BusinessBlueprint) -> List[CodeArtifact]:
+        """Generate backend application scaffold files and package inits"""
+        artifacts: List[CodeArtifact] = []
+
+        # Package __init__.py files
+        for pkg in [
+            "backend/app",
+            "backend/app/api",
+            "backend/app/models",
+            "backend/app/core",
+            "backend/app/db",
+        ]:
+            artifacts.append(CodeArtifact(
+                file_path=f"{pkg}/__init__.py",
+                content="",
+                description=f"Package init for {pkg}"
+            ))
+
+        # FastAPI app entrypoint
+        main_py = f'''from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.api.main import api_router
+
+
+def create_app() -> FastAPI:
+    app = FastAPI(title="{blueprint.project_id}", version="1.0.0")
+    app.include_router(api_router, prefix="/api")
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    @app.get("/health")
+    async def health():
+        return {{"status": "healthy"}}
+
+    return app
+
+
+app = create_app()
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/main.py",
+            content=main_py,
+            description="FastAPI application entrypoint"
+        ))
+
+        # Database setup with shared Base and get_db
+        database_py = '''from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+import os
+
+
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./app.db")
+
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/db/database.py",
+            content=database_py,
+            description="SQLAlchemy engine/session and shared Base"
+        ))
+
+        # Security helpers (hashing + JWT minimal)
+        security_py = '''from datetime import datetime, timedelta
+from typing import Optional
+
+from jose import jwt
+from passlib.context import CryptContext
+
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+JWT_SECRET = "change-me-in-production"
+JWT_ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
+
+
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def create_access_token(data: dict, expires_minutes: int = ACCESS_TOKEN_EXPIRE_MINUTES) -> str:
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=expires_minutes)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    return encoded_jwt
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/core/security.py",
+            content=security_py,
+            description="Password hashing and JWT helpers"
+        ))
+
+        # App settings (simple placeholder for env access)
+        config_py = '''from pydantic import BaseSettings
+
+
+class Settings(BaseSettings):
+    database_url: str | None = None
+    secret_key: str = "change-me"
+    debug: bool = False
+
+    class Config:
+        env_file = ".env"
+
+
+settings = Settings()
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/core/config.py",
+            content=config_py,
+            description="Application configuration via pydantic settings"
+        ))
+
+        return artifacts
+
+    async def _generate_alembic_scaffold(self, blueprint: BusinessBlueprint) -> List[CodeArtifact]:
+        """Generate minimal Alembic configuration to enable migrations"""
+        artifacts: List[CodeArtifact] = []
+
+        alembic_ini = '''[alembic]
+script_location = alembic
+sqlalchemy.url = %(DATABASE_URL)s
+
+[loggers]
+keys = root,sqlalchemy,alembic
+
+[handlers]
+keys = console
+
+[formatters]
+keys = generic
+
+[logger_root]
+level = WARN
+handlers = console
+
+[logger_sqlalchemy]
+level = WARN
+handlers =
+qualname = sqlalchemy.engine
+
+[logger_alembic]
+level = INFO
+handlers =
+qualname = alembic
+
+[handler_console]
+class = StreamHandler
+args = (sys.stderr,)
+level = NOTSET
+formatter = generic
+
+[formatter_generic]
+format = %(levelname)-5.5s [%(name)s] %(message)s
+'''
+        env_py = '''from logging.config import fileConfig
+from sqlalchemy import engine_from_config, pool
+from alembic import context
+import os
+
+
+config = context.config
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
+
+# Interpret the config file for Python logging.
+
+# Set SQLAlchemy URL from env if present
+db_url = os.getenv("DATABASE_URL")
+if db_url:
+    config.set_main_option("sqlalchemy.url", db_url)
+
+# target_metadata points to the Base metadata
+from app.db.database import Base  # noqa
+target_metadata = Base.metadata
+
+
+def run_migrations_offline():
+    url = config.get_main_option("sqlalchemy.url")
+    context.configure(url=url, target_metadata=target_metadata, literal_binds=True)
+
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+def run_migrations_online():
+    connectable = engine_from_config(
+        config.get_section(config.config_ini_section),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
+
+    with connectable.connect() as connection:
+        context.configure(connection=connection, target_metadata=target_metadata)
+
+        with context.begin_transaction():
+            context.run_migrations()
+
+
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()
+'''
+        artifacts.append(CodeArtifact(
+            file_path="alembic.ini",
+            content=alembic_ini,
+            description="Alembic base configuration"
+        ))
+        artifacts.append(CodeArtifact(
+            file_path="alembic/env.py",
+            content=env_py,
+            description="Alembic environment referencing shared Base"
+        ))
+        artifacts.append(CodeArtifact(
+            file_path="alembic/versions/.keep",
+            content="",
+            description="Versions directory placeholder"
+        ))
+        return artifacts
+
+    async def _generate_frontend_shell(self, blueprint: BusinessBlueprint) -> List[CodeArtifact]:
+        """Generate a minimal frontend shell that mounts dashboard component"""
+        artifacts: List[CodeArtifact] = []
+
+        index_html = f'''<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{blueprint.solution_concept.core_value_proposition}</title>
+  </head>
+  <body>
+    <business-dashboard></business-dashboard>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+  </html>
+'''
+        main_ts = '''import './components/business-dashboard';
+// Entry point to mount web components; route handling can be added later.
+'''
+        artifacts.append(CodeArtifact(
+            file_path="frontend/index.html",
+            content=index_html,
+            description="Frontend HTML shell"
+        ))
+        artifacts.append(CodeArtifact(
+            file_path="frontend/src/main.ts",
+            content=main_ts,
+            description="Frontend entry script"
+        ))
+        return artifacts
     
     async def _generate_workflow_endpoints(self, blueprint: BusinessBlueprint) -> CodeArtifact:
         """Generate business workflow endpoints"""
