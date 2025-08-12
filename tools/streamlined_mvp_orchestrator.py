@@ -158,6 +158,10 @@ passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
 python-dotenv==1.0.0
 alembic==1.12.1
+redis==5.0.1
+rq==1.15.1
+boto3==1.34.19
+email-validator==2.1.1
 """
         
         with open(project_path / "backend" / "requirements.txt", "w") as f:
@@ -202,6 +206,19 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 # Development
 DEBUG=True
+
+# Storage (S3-compatible)
+S3_ENDPOINT_URL=
+S3_BUCKET=
+S3_ACCESS_KEY=
+S3_SECRET_KEY=
+
+# Email
+EMAIL_PROVIDER=smtp
+SMTP_HOST=localhost
+SMTP_PORT=1025
+SMTP_USERNAME=
+SMTP_PASSWORD=
 """
         
         with open(project_path / ".env.template", "w") as f:
