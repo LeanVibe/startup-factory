@@ -525,26 +525,64 @@ async def refresh(refresh_token: str):
     return {"access_token": new_access, "token_type": "bearer"}
 
 
+@router.post("/request-verify")
+async def request_email_verification(email: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    token = create_access_token({"sub": user.email, "type": "verify"}, expires_minutes=60)
+    # TODO: send via EmailService; returning for demo
+    return {"message": "Verification email sent", "token": token}
+
+
+@router.post("/verify")
+async def verify_email(token: str, db: Session = Depends(get_db)):
+    payload = decode_token(token)
+    if not payload or payload.get("type") != "verify":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token")
+    user = db.query(User).filter(User.email == payload.get("sub")).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    user.is_verified = True
+    db.add(user); db.commit(); db.refresh(user)
+    return {"message": "Email verified"}
+
+
+@router.post("/request-reset")
+async def request_password_reset(email: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    token = create_access_token({"sub": user.email, "type": "reset"}, expires_minutes=30)
+    # TODO: send via EmailService; returning for demo
+    return {"message": "Reset email sent", "token": token}
+
+
+@router.post("/reset")
+async def reset_password(token: str, new_password: str, db: Session = Depends(get_db)):
+    payload = decode_token(token)
+    if not payload or payload.get("type") != "reset":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token")
+    user = db.query(User).filter(User.email == payload.get("sub")).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    user.hashed_password = get_password_hash(new_password)
+    db.add(user); db.commit(); db.refresh(user)
+    return {"message": "Password reset successful"}
+
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ) -> User:
     """Get current authenticated user"""
-    
-    # TODO: Implement JWT token verification
-    # For now, this is a placeholder
     token = credentials.credentials
-    
-    # Decode JWT token and get user
-    # This is simplified - implement proper JWT verification
-    user = db.query(User).filter(User.email == "test@example.com").first()
-    
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials"
-        )
-    
+    payload = decode_token(token)
+    if not payload or payload.get("type") != "access":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    user = db.query(User).filter(User.email == payload.get("sub")).first()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication credentials")
     return user
 '''
         
