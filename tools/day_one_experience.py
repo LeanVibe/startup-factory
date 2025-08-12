@@ -367,9 +367,17 @@ class DayOneExperience:
                     "environment": [
                         f"DATABASE_URL=postgresql://postgres:password@db:5432/{blueprint.project_id.replace('-', '_')}",
                         "SECRET_KEY=production-secret-key-change-me",
-                        "DEBUG=False"
+                        "DEBUG=False",
+                        "REDIS_URL=redis://redis:6379/0"
                     ],
                     "depends_on": ["db", "redis"],
+                    "restart": "unless-stopped"
+                },
+                "worker": {
+                    "build": ".",
+                    "command": ["python", "-m", "backend.app.worker.worker"],
+                    "environment": ["REDIS_URL=redis://redis:6379/0"],
+                    "depends_on": ["web", "redis"],
                     "restart": "unless-stopped"
                 },
                 "db": {
@@ -537,6 +545,25 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
         use_cloudflare = (os.getenv("ENABLE_CLOUDFLARE_TUNNEL") == "1") or target == "tunnel"
         use_ngrok = (os.getenv("ENABLE_NGROK_TUNNEL") == "1") and os.getenv("NGROK_AUTHTOKEN")
         
+        # Cloud deployers (skeletons) — return actionable messages and ensure manifests are present
+        if target in ("fly", "render"):
+            try:
+                from .business_blueprint_generator import Path  # type: ignore
+            except Exception:
+                pass
+            # Generate manifest stubs under project path if missing
+            project_path = Path("production_projects") / blueprint.project_id
+            if target == "fly":
+                fly_file = project_path / 'fly.toml'
+                if not fly_file.exists():
+                    fly_file.write_text('[app]\nname = "mvp-app"\n')
+                return "https://pending.fly.deploy"  # placeholder URL
+            if target == "render":
+                render_file = project_path / 'render.yaml'
+                if not render_file.exists():
+                    render_file.write_text('services:\n  - name: web\n    type: web\n')
+                return "https://pending.render.deploy"
+
         if use_cloudflare and shutil.which("cloudflared"):
             url = await self._start_cloudflare_tunnel()
             if url:

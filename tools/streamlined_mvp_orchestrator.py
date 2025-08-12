@@ -123,6 +123,7 @@ class StreamlinedOrchestrator:
             (project_path / "backend" / "app" / "services").mkdir(parents=True, exist_ok=True)
             (project_path / "backend" / "app" / "core").mkdir(parents=True, exist_ok=True)
             (project_path / "backend" / "app" / "db").mkdir(parents=True, exist_ok=True)
+            (project_path / "backend" / "app" / "worker").mkdir(parents=True, exist_ok=True)
             (project_path / "frontend" / "src" / "components").mkdir(parents=True, exist_ok=True)
             (project_path / "docs").mkdir(exist_ok=True)
             progress.advance(task)

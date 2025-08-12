@@ -190,6 +190,10 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     role = Column(String, default='member', nullable=False)
+    failed_login_attempts = Column(Integer, default=0)
+    locked_until = Column(DateTime, nullable=True)
+    totp_secret = Column(String, nullable=True)
+    is_totp_enabled = Column(Boolean, default=False)
     
     # Business-specific fields
     {additional_fields_str}
@@ -432,6 +436,8 @@ from typing import Optional
 from app.models.user import User, UserCreate, UserResponse
 from app.core.security import verify_password, get_password_hash, create_access_token, create_refresh_token, decode_token
 from app.db.database import get_db
+from datetime import datetime, timedelta
+import secrets
 
 router = APIRouter()
 security = HTTPBearer()
@@ -506,19 +512,33 @@ async def login(email: str, password: str, db: Session = Depends(get_db)):
     
     user = db.query(User).filter(User.email == email).first()
     if not user or not verify_password(password, user.hashed_password):
+        # increment failed attempts and lockout if needed
+        if user:
+            user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+            if user.failed_login_attempts >= 5:
+                user.locked_until = datetime.utcnow() + timedelta(minutes=15)
+            db.add(user); db.commit()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password"
         )
     
+    # lockout check
+    if user.locked_until and user.locked_until > datetime.utcnow():
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Account temporarily locked")
+
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Inactive user"
         )
     
+    # Reset failed attempts on success
+    user.failed_login_attempts = 0
+    db.add(user); db.commit(); db.refresh(user)
+
     access_token = create_access_token(data={"sub": user.email})
-    refresh_token = create_refresh_token(data={"sub": user.email})
+    refresh_token = create_refresh_token(data={"sub": user.email, "jti": secrets.token_hex(8)})
     
     return {
         "access_token": access_token,
@@ -533,8 +553,10 @@ async def refresh(refresh_token: str):
     payload = decode_token(refresh_token)
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+    # naive rotation: issue new refresh with new jti; blacklist old jti (in-memory placeholder)
     new_access = create_access_token(data={"sub": payload.get("sub")})
-    return {"access_token": new_access, "token_type": "bearer"}
+    new_refresh = create_refresh_token(data={"sub": payload.get("sub"), "jti": secrets.token_hex(8)})
+    return {"access_token": new_access, "refresh_token": new_refresh, "token_type": "bearer"}
 
 
 @router.post("/request-verify")
@@ -983,6 +1005,32 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
             description="Security headers, request size limit, and audit log middleware"
         ))
 
+        # CSRF middleware (cookie-based sessions optional)
+        csrf_mw = '''from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import PlainTextResponse
+
+
+class CSRFMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        # Simple CSRF token check for cookie-based sessions: look for X-CSRF-Token matching cookie
+        if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+            token = request.headers.get('X-CSRF-Token')
+            cookie = request.cookies.get('csrf_token')
+            if cookie and token and token == cookie:
+                return await call_next(request)
+            # Allow bearer-auth only flows to bypass when no cookie exists
+            auth = request.headers.get('Authorization', '')
+            if auth.startswith('Bearer '):
+                return await call_next(request)
+            return PlainTextResponse('CSRF token missing or invalid', status_code=403)
+        return await call_next(request)
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/middleware/csrf.py",
+            content=csrf_mw,
+            description="Optional CSRF middleware for cookie-based sessions"
+        ))
+
         middleware_rate = '''import time
 from collections import defaultdict, deque
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -1060,6 +1108,11 @@ class EmailService:
             return True
         except Exception:
             return False
+    
+    def render_template(self, template_name: str, context: Dict) -> str:
+        # Minimal templating without adding a dependency; replace with Jinja in production
+        body = context.get('body') or ''
+        return body
 '''
         artifacts.append(CodeArtifact(
             file_path="backend/app/services/email_service.py",
@@ -1084,8 +1137,22 @@ class StorageService:
         self.bucket = os.getenv('S3_BUCKET') or ''
 
     def put_object(self, key: str, data: bytes, content_type: str = 'application/octet-stream') -> str:
+        max_bytes = int(os.getenv('MAX_UPLOAD_BYTES', str(5 * 1024 * 1024)))
+        if len(data) > max_bytes:
+            raise ValueError('File too large')
+        # Virus scan hook (stub)
+        if os.getenv('ENABLE_VIRUS_SCAN') == '1':
+            # TODO: integrate ClamAV or provider API
+            pass
         self._client.put_object(Bucket=self.bucket, Key=key, Body=data, ContentType=content_type)
         return key
+    
+    def get_presigned_put_url(self, key: str, expires_seconds: int = 600, content_type: str = 'application/octet-stream') -> str:
+        return self._client.generate_presigned_url(
+            'put_object',
+            Params={'Bucket': self.bucket, 'Key': key, 'ContentType': content_type},
+            ExpiresIn=expires_seconds
+        )
 '''
         artifacts.append(CodeArtifact(
             file_path="backend/app/services/storage_service.py",
@@ -1094,7 +1161,7 @@ class StorageService:
         ))
 
         # Files API for uploads
-        files_api = '''from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
+        files_api = '''from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends, Query
 from app.services.storage_service import StorageService
 from app.api.auth import get_current_user
 
@@ -1114,6 +1181,17 @@ async def upload_file(
         return {"key": key}
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.post('/sign-upload')
+async def sign_upload(
+    filename: str = Query(...),
+    content_type: str = Query('application/octet-stream'),
+    current_user = Depends(get_current_user),
+):
+    key = f"uploads/{current_user.id}/{filename}"
+    url = StorageService().get_presigned_put_url(key, content_type=content_type)
+    return {"key": key, "url": url}
 '''
         artifacts.append(CodeArtifact(
             file_path="backend/app/api/files.py",
@@ -1158,7 +1236,7 @@ def _get_queue() -> Queue:
 @router.post('/sample')
 async def enqueue_sample_job(payload: dict, current_user = Depends(get_current_user)):
     q = _get_queue()
-    job = q.enqueue(sample_job, payload)
+    job = q.enqueue(sample_job, payload, retry=3, ttl=600, result_ttl=600, failure_ttl=3600, timeout=120)
     return {"job_id": job.id, "status": job.get_status(refresh=False)}
 '''
         artifacts.append(CodeArtifact(
@@ -1185,7 +1263,8 @@ def get_redis_connection():
 def main():
     with Connection(get_redis_connection()):
         worker = Worker(list(map(Queue, listen)))
-        worker.work(burst=True)
+        burst = os.getenv('WORKER_BURST', '1') in ('1','true','yes')
+        worker.work(burst=burst)
 
 
 if __name__ == '__main__':
