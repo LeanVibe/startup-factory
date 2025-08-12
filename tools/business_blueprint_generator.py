@@ -141,12 +141,12 @@ class BusinessLogicGenerator:
         """Generate user model with business-specific fields"""
         
         # Add business-specific user fields based on industry/business model
+        # Note: role is handled as a core field with Column + in Pydantic models
         additional_fields = []
         
         if blueprint.business_model == BusinessModel.B2B_SAAS:
             additional_fields.extend([
                 "company_name: Optional[str] = None",
-                "role: Optional[str] = None",
                 "team_size: Optional[int] = None"
             ])
         elif blueprint.business_model == BusinessModel.MARKETPLACE:
@@ -189,6 +189,7 @@ class User(Base):
     is_verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    role = Column(String, default='member', nullable=False)
     
     # Business-specific fields
     {additional_fields_str}
@@ -197,6 +198,7 @@ class User(Base):
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
+    role: Optional[str] = 'member'
     {additional_fields_str.replace(": Optional[str] = None", ": Optional[str] = None").replace(": bool = False", ": Optional[bool] = None")}
 
 
@@ -206,6 +208,7 @@ class UserResponse(BaseModel):
     is_active: bool
     is_verified: bool
     created_at: datetime
+    role: str
     {additional_fields_str.replace(" = None", "").replace(" = False", "")}
     
     class Config:
@@ -349,6 +352,8 @@ from typing import List
 from app.models.user import User, UserResponse
 from app.api.auth import get_current_user
 from app.api import auth
+from app.api import files
+from app.api import jobs
 
 # Import business-specific routers
 '''
@@ -394,6 +399,12 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
             "business_metrics": {{}}
         }}
     }}
+
+# Files routes
+api_router.include_router(files.router, prefix="/files", tags=["files"])
+
+# Jobs routes
+api_router.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
 '''
         
         return CodeArtifact(
@@ -466,6 +477,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     db_user = User(
         email=user_data.email,
         hashed_password=hashed_password,
+        role=(user_data.role or 'member'),
 '''
         
         # Add business-specific fields to user creation
@@ -613,6 +625,7 @@ from app.models.user import User
 from app.models.{entity_lower} import {entity_name}, {entity_name}Create, {entity_name}Response
 from app.api.auth import get_current_user
 from app.db.database import get_db
+from app.core.rbac import require_roles
 
 router = APIRouter()
 
@@ -643,6 +656,7 @@ async def create_{entity_lower}(
     db: Session = Depends(get_db)
 ):
     """Create new {entity_lower}"""
+    _ = await require_roles("admin", "owner")(current_user)
     
     # Business-specific validation
     # TODO: Add business rules for {entity_lower} creation
@@ -689,6 +703,7 @@ async def update_{entity_lower}(
     db: Session = Depends(get_db)
 ):
     """Update existing {entity_lower}"""
+    _ = await require_roles("admin", "owner")(current_user)
     
     db_{entity_lower} = db.query({entity_name}).filter({entity_name}.id == item_id).first()
     
@@ -756,6 +771,7 @@ async def delete_{entity_lower}(
             "backend/app/models",
             "backend/app/core",
             "backend/app/db",
+            "backend/app/worker",
         ]:
             artifacts.append(CodeArtifact(
                 file_path=f"{pkg}/__init__.py",
@@ -870,6 +886,35 @@ def create_access_token(data: dict, expires_minutes: int = ACCESS_TOKEN_EXPIRE_M
             description="Password hashing and JWT helpers"
         ))
 
+        # RBAC helper module
+        rbac_py = '''from enum import Enum
+from typing import Callable
+from fastapi import Depends, HTTPException, status
+
+
+class Role(str, Enum):
+    owner = "owner"
+    admin = "admin"
+    member = "member"
+
+
+def require_roles(*allowed_roles: str) -> Callable:
+    async def dependency(current_user = Depends(lambda: None)):
+        # current_user expected from get_current_user in real routes
+        if current_user is None:
+            return None
+        user_role = getattr(current_user, 'role', 'member') or 'member'
+        if user_role not in allowed_roles:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient role")
+        return None
+    return dependency
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/core/rbac.py",
+            content=rbac_py,
+            description="RBAC roles and dependency"
+        ))
+
         # App settings (with security defaults)
         config_py = '''from pydantic import BaseSettings, Field
 from typing import List
@@ -968,8 +1013,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             description="Naive in-memory rate limiter"
         ))
 
-        # Email service stub
-        email_service = '''from typing import Optional, Dict
+        # Email service with SMTP implementation
+        email_service = '''import os
+import smtplib
+import ssl
+from email.message import EmailMessage
+from typing import Optional, Dict
 
 
 class EmailService:
@@ -978,9 +1027,39 @@ class EmailService:
         self.config = config or {}
 
     async def send_email(self, to_email: str, subject: str, body: str) -> bool:
-        # TODO: Implement provider-specific sending (SMTP/API)
-        # For now, assume success in demo mode
-        return True
+        host = os.getenv('SMTP_HOST') or self.config.get('host')
+        if not host:
+            # No configuration; noop success
+            return True
+        port = int(os.getenv('SMTP_PORT') or self.config.get('port') or 587)
+        username = os.getenv('SMTP_USERNAME') or self.config.get('username')
+        password = os.getenv('SMTP_PASSWORD') or self.config.get('password')
+        use_tls = (os.getenv('SMTP_USE_TLS') or str(self.config.get('use_tls', '1'))).lower() not in ('0', 'false', 'no')
+        from_addr = os.getenv('EMAIL_FROM') or self.config.get('from') or (username or 'no-reply@example.com')
+
+        message = EmailMessage()
+        message['From'] = from_addr
+        message['To'] = to_email
+        message['Subject'] = subject
+        message.set_content(body)
+
+        try:
+            if use_tls and port == 465:
+                context = ssl.create_default_context()
+                with smtplib.SMTP_SSL(host, port, context=context, timeout=10) as server:
+                    if username and password:
+                        server.login(username, password)
+                    server.send_message(message)
+            else:
+                with smtplib.SMTP(host, port, timeout=10) as server:
+                    if use_tls:
+                        server.starttls(context=ssl.create_default_context())
+                    if username and password:
+                        server.login(username, password)
+                    server.send_message(message)
+            return True
+        except Exception:
+            return False
 '''
         artifacts.append(CodeArtifact(
             file_path="backend/app/services/email_service.py",
@@ -1042,6 +1121,80 @@ async def upload_file(
             description="File upload endpoint",
             dependencies=["fastapi"],
             is_business_logic=False
+        ))
+
+        # Jobs service
+        jobs_service = '''from datetime import datetime
+
+
+def sample_job(payload: dict) -> dict:
+    return {"echo": payload, "processed_at": datetime.utcnow().isoformat()}
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/services/jobs.py",
+            content=jobs_service,
+            description="Background jobs service"
+        ))
+
+        # Jobs API for enqueuing sample jobs
+        jobs_api = '''from fastapi import APIRouter, Depends
+from rq import Queue
+import os
+import redis
+
+from app.api.auth import get_current_user
+from app.services.jobs import sample_job
+
+
+router = APIRouter()
+
+
+def _get_queue() -> Queue:
+    redis_url = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+    conn = redis.from_url(redis_url)
+    return Queue('default', connection=conn)
+
+
+@router.post('/sample')
+async def enqueue_sample_job(payload: dict, current_user = Depends(get_current_user)):
+    q = _get_queue()
+    job = q.enqueue(sample_job, payload)
+    return {"job_id": job.id, "status": job.get_status(refresh=False)}
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/api/jobs.py",
+            content=jobs_api,
+            description="Jobs enqueue endpoints"
+        ))
+
+        # RQ worker entrypoint
+        worker_py = '''import os
+import sys
+import redis
+from rq import Worker, Queue, Connection
+
+
+listen = ['default']
+
+
+def get_redis_connection():
+    url = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+    return redis.from_url(url)
+
+
+def main():
+    with Connection(get_redis_connection()):
+        worker = Worker(list(map(Queue, listen)))
+        worker.work(burst=True)
+
+
+if __name__ == '__main__':
+    main()
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/worker/worker.py",
+            content=worker_py,
+            description="RQ worker entrypoint"
         ))
 
         return artifacts
@@ -1149,6 +1302,21 @@ else:
             file_path="alembic/versions/.keep",
             content="",
             description="Versions directory placeholder"
+        ))
+        # Migrations helper
+        migrations_helper = '''"""
+Simple helper describing Alembic migration workflow.
+
+Usage:
+1. Make model changes in backend/app/models
+2. Generate revision: alembic revision --autogenerate -m "Your message"
+3. Apply: alembic upgrade head
+"""
+'''
+        artifacts.append(CodeArtifact(
+            file_path="tools/migrations_helper.py",
+            content=migrations_helper,
+            description="Alembic migrations helper"
         ))
         return artifacts
 
@@ -1822,6 +1990,61 @@ class {blueprint.business_model.value.replace('_', '').title()}BusinessLogic:
         docker_compose = self._generate_docker_compose(blueprint)
         artifacts.append(docker_compose)
         
+        # Deployer skeleton manifests/messages
+        base_deployer = CodeArtifact(
+            file_path="tools/deployers/base.py",
+            content='''from pathlib import Path
+from typing import Dict, Any
+
+
+class BaseDeployer:
+    name = "base"
+
+    def generate_manifests(self, project_path: Path) -> Dict[str, Any]:
+        return {"message": "Base deployer - override in subclasses"}
+''',
+            description="Base deployer interface"
+        )
+        artifacts.append(base_deployer)
+
+        fly_deployer = CodeArtifact(
+            file_path="tools/deployers/fly.py",
+            content='''from pathlib import Path
+from .base import BaseDeployer
+
+
+class FlyDeployer(BaseDeployer):
+    name = "fly"
+
+    def generate_manifests(self, project_path: Path):
+        fly_toml = (project_path / 'fly.toml')
+        if not fly_toml.exists():
+            fly_toml.write_text('[app]\nname = "mvp-app"\n')
+        return {"message": "Fly.io manifest created", "files": [str(fly_toml)]}
+''',
+            description="Fly.io deployer stub"
+        )
+        artifacts.append(fly_deployer)
+
+        render_deployer = CodeArtifact(
+            file_path="tools/deployers/render.py",
+            content='''from pathlib import Path
+from .base import BaseDeployer
+
+
+class RenderDeployer(BaseDeployer):
+    name = "render"
+
+    def generate_manifests(self, project_path: Path):
+        render_yaml = (project_path / 'render.yaml')
+        if not render_yaml.exists():
+            render_yaml.write_text('services:\n  - name: web\n    type: web\n')
+        return {"message": "Render.com manifest created", "files": [str(render_yaml)]}
+''',
+            description="Render.com deployer stub"
+        )
+        artifacts.append(render_deployer)
+        
         return artifacts
     
     def _generate_dockerfile(self, blueprint: BusinessBlueprint) -> CodeArtifact:
@@ -1909,6 +2132,7 @@ services:
       - DATABASE_URL=postgresql://postgres:password@db:5432/{blueprint.project_id.replace('-', '_')}
       - SECRET_KEY=your-secret-key-change-in-production
       - DEBUG=False
+      - REDIS_URL=redis://redis:6379/0
     depends_on:
       - db
       - redis
@@ -1917,6 +2141,16 @@ services:
       - ./backend:/app/backend
       - ./alembic:/app/alembic
       - ./alembic.ini:/app/alembic.ini
+    restart: unless-stopped
+    
+  worker:
+    build: .
+    command: ["python", "-m", "backend.app.worker.worker"]
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - web
+      - redis
     restart: unless-stopped
     
   db:

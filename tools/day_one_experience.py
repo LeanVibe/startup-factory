@@ -268,22 +268,27 @@ class DayOneExperience:
             
             progress.advance(task)
             
-            # Write all generated files
+            # Write all generated files (safe-write)
             for artifact in artifacts:
                 file_path = project_path / artifact.file_path
                 file_path.parent.mkdir(parents=True, exist_ok=True)
-                
-                with open(file_path, 'w') as f:
+                target = file_path
+                if file_path.exists():
+                    target = file_path.with_suffix(file_path.suffix + ".new")
+                with open(target, 'w') as f:
                     f.write(artifact.content)
                 
                 progress.update(task, description=f"Writing {artifact.file_path}...")
                 progress.advance(task)
             
-            # Add business intelligence modules
+            # Add business intelligence modules (safe-write)
             progress.update(task, description="Integrating business intelligence...")
             for module_name, module_code in business_logic.items():
                 module_file = project_path / "backend" / "app" / "services" / f"{module_name}.py"
-                with open(module_file, 'w') as f:
+                target = module_file
+                if module_file.exists():
+                    target = module_file.with_suffix(module_file.suffix + ".new")
+                with open(target, 'w') as f:
                     f.write(module_code)
             
             progress.advance(task)

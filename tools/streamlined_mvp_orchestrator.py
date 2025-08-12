@@ -112,6 +112,7 @@ class StreamlinedOrchestrator:
         
         project_path = self.output_dir / blueprint.project_id
         project_path.mkdir(exist_ok=True)
+        conflicts: list[tuple[str, str]] = []
         
         with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
             task = progress.add_task("Creating project structure...", total=len(artifacts) + 2)
@@ -126,12 +127,16 @@ class StreamlinedOrchestrator:
             (project_path / "docs").mkdir(exist_ok=True)
             progress.advance(task)
             
-            # Write all generated code files
+            # Write all generated code files (safe-write)
             for artifact in artifacts:
                 file_path = project_path / artifact.file_path
                 file_path.parent.mkdir(parents=True, exist_ok=True)
-                
-                with open(file_path, 'w') as f:
+                target_path = file_path
+                if file_path.exists():
+                    # Safe-write to .new and record conflict
+                    target_path = file_path.with_suffix(file_path.suffix + ".new")
+                    conflicts.append((str(file_path), str(target_path)))
+                with open(target_path, 'w') as f:
                     f.write(artifact.content)
                 
                 progress.update(task, description=f"Writing {artifact.file_path}...")
@@ -142,6 +147,10 @@ class StreamlinedOrchestrator:
             progress.advance(task)
         
         console.print(f"[green]✅ Project created at: {project_path}[/green]")
+        if conflicts:
+            console.print("[yellow]⚠️  Safe-write conflicts detected:[/yellow]")
+            for orig, new in conflicts:
+                console.print(f" - {orig} -> {new}")
         return project_path
     
     async def _generate_essential_configs(self, project_path: Path, blueprint: BusinessBlueprint):
