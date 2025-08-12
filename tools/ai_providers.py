@@ -19,10 +19,13 @@ from enum import Enum
 from typing import Dict, List, Optional, Any, Callable
 
 import aiohttp
-import openai
+try:
+    import openai  # Optional legacy provider
+except ImportError:  # Keep module import-safe without OpenAI installed
+    openai = None
 from anthropic import Anthropic
 
-from core_types import Task, TaskResult, TaskType, ProviderError
+from .core_types import Task, TaskResult, TaskType, ProviderError
 
 logger = logging.getLogger(__name__)
 
@@ -644,6 +647,8 @@ class OpenAIProvider(ReliableAIProvider):
     
     def __init__(self, config: ProviderConfig):
         self.config = config
+        if openai is None:
+            raise RuntimeError("OpenAI SDK not installed; legacy provider unavailable")
         self.client = openai.AsyncOpenAI(api_key=config.api_key)
         self.call_history: List[ProviderCall] = []
         
@@ -1132,50 +1137,22 @@ class AIProviderManager:
         return result
     
     async def process_task(self, task: Task, preferred_provider: str = None) -> TaskResult:
-        """Process a task by routing to the best available provider"""
-        # Define task type to provider mapping
-        task_provider_mapping = {
-            TaskType.MARKET_RESEARCH: "perplexity",
-            TaskType.FOUNDER_ANALYSIS: "anthropic", 
-            TaskType.MVP_SPECIFICATION: "anthropic",
-            TaskType.ARCHITECTURE_DESIGN: "anthropic",
-            TaskType.CODE_GENERATION: "openai",
-            TaskType.TESTING: "openai",
-            TaskType.DEPLOYMENT: "anthropic"
-        }
-        
-        # Use preferred provider if specified, otherwise use task mapping
-        target_provider = preferred_provider or task_provider_mapping.get(task.type, "openai")
-        
-        # Try primary provider first
-        try:
-            if target_provider in self.providers and self.configurations[target_provider].enabled:
-                return await self.call_provider(target_provider, task)
-        except Exception as e:
-            logger.warning(f"Primary provider {target_provider} failed: {str(e)}")
-        
-        # Fallback to any available provider
-        for provider_name, config in self.configurations.items():
-            if config.enabled and provider_name != target_provider:
-                try:
-                    logger.info(f"Falling back to provider: {provider_name}")
-                    return await self.call_provider(provider_name, task)
-                except Exception as e:
-                    logger.warning(f"Fallback provider {provider_name} failed: {str(e)}")
-                    continue
-        
-        # If all providers fail, return error result
-        return TaskResult(
-            task_id=task.id,
-            startup_id=task.startup_id,
-            success=False,
-            content="All providers failed",
-            cost=0.0,
-            provider_used="none",
-            execution_time_seconds=0.0,
-            completed_at=datetime.utcnow(),
-            error_message="All AI providers are unavailable"
-        )
+        """Process a task. Post-transformation, default to Anthropic for all tasks."""
+        provider_name = preferred_provider or "anthropic"
+        if provider_name not in self.providers or not self.configurations.get(provider_name, ProviderConfig('', '', {}, 0, 0, 0, 0)).enabled:
+            # If Anthropic not configured, return clear error
+            return TaskResult(
+                task_id=task.id,
+                startup_id=task.startup_id,
+                success=False,
+                content="",
+                cost=0.0,
+                provider_used=provider_name,
+                execution_time_seconds=0.0,
+                completed_at=datetime.utcnow(),
+                error_message="Anthropic provider not configured (set ANTHROPIC_API_KEY)"
+            )
+        return await self.call_provider(provider_name, task)
     
     def get_cost_statistics(self) -> Dict[str, Any]:
         """Get cost statistics across all providers"""
@@ -1208,8 +1185,12 @@ def create_default_provider_manager() -> AIProviderManager:
     """Create a default provider manager with common configurations"""
     manager = AIProviderManager()
     
-    # OpenAI configuration
-    if os.getenv('OPENAI_API_KEY'):
+    # By default, only Anthropic is configured (single-provider strategy).
+    # Set ALLOW_MULTI_PROVIDERS=1 to enable legacy providers if needed.
+    allow_multi = os.getenv('ALLOW_MULTI_PROVIDERS') == '1'
+    
+    # OpenAI configuration (disabled by default)
+    if allow_multi and os.getenv('OPENAI_API_KEY') and openai is not None:
         openai_config = ProviderConfig(
             name='openai',
             api_key=os.getenv('OPENAI_API_KEY'),
@@ -1222,15 +1203,14 @@ def create_default_provider_manager() -> AIProviderManager:
                 'testing': 'gpt-4o',
                 'deployment': 'gpt-4o'
             },
-            cost_per_input_token=0.00001,  # $0.01 per 1K tokens for GPT-4o
-            cost_per_output_token=0.00003,  # $0.03 per 1K tokens for GPT-4o
+            cost_per_input_token=0.00001,
+            cost_per_output_token=0.00003,
             max_tokens=4000,
             max_concurrent=10
         )
-        
         openai_provider = OpenAIProvider(openai_config)
         manager.register_provider('openai', openai_provider, openai_config)
-    
+
     # Anthropic configuration
     if os.getenv('ANTHROPIC_API_KEY'):
         anthropic_config = ProviderConfig(
@@ -1254,11 +1234,11 @@ def create_default_provider_manager() -> AIProviderManager:
         anthropic_provider = AnthropicProvider(anthropic_config)
         manager.register_provider('anthropic', anthropic_provider, anthropic_config)
     
-    # OpenCode CLI configuration (if available)
-    if os.path.exists('/Users/bogdan/.opencode/bin/opencode'):
+    # OpenCode CLI configuration (disabled by default)
+    if allow_multi and os.path.exists('/Users/bogdan/.opencode/bin/opencode'):
         opencode_config = ProviderConfig(
             name='opencode',
-            api_key=os.getenv('OPENAI_API_KEY', ''),  # OpenCode uses OpenAI API
+            api_key=os.getenv('OPENAI_API_KEY', ''),
             models={
                 'cli_path': '/Users/bogdan/.opencode/bin/opencode',
                 'code': 'gpt-4o',
@@ -1270,7 +1250,6 @@ def create_default_provider_manager() -> AIProviderManager:
             max_tokens=4000,
             max_concurrent=5
         )
-        
         opencode_provider = OpenCodeCLIProvider(opencode_config)
         manager.register_provider('opencode', opencode_provider, opencode_config)
     

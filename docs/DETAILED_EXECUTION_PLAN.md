@@ -1,21 +1,21 @@
-# Startup Factory - Detailed Execution Plan
+# Startup Factory - Detailed Execution Plan (Deprecated)
 
-**Target**: Production Launch in 24-48 hours  
+This document described a pre-transformation multi-provider execution plan. The system has since been simplified to a single-command, single-provider workflow.
 
-**Note:** All orchestration, escalation, and gate protocols are managed by main agent leadership. See CLAUDE.md and docs/transition-log.md for details.
-
-**Current Status**: 85% ready, focusing on critical path execution  
-**Timeline**: Detailed hour-by-hour breakdown
+For the current truth, see:
+- `README.md` (overview and usage)
+- `CLAUDE.md` (developer guidance)
+- `TRANSFORMATION_COMPLETE.md` (final architecture)
 
 ---
 
-## 🎯 **PRIORITY A: CRITICAL PATH ITEMS**
+## Historical Reference
 
 ### **A1: End-to-End Integration Testing** (4-6 hours)
 
 #### **A1.1: MVP Orchestrator Workflow Testing** (2-3 hours)
-**Owner:** main agent leadership
-**Prerequisites**: Valid API keys for all three providers
+Owner: legacy plan
+Prerequisites: multiple provider keys (now replaced by `ANTHROPIC_API_KEY`)
 
 **Detailed Steps**:
 1. **Setup Test Environment** (30 min)

@@ -199,6 +199,12 @@ startup_factory.py                  # 🎯 Unified Entry Point
 - **System Status**: `python startup_factory.py --status`
 - **Demo Mode**: `python startup_factory.py --demo`
 
+### Documentation
+See:
+- `CLAUDE.md` — developer guidelines and architecture
+- `PRODUCTION_SETUP.md` — concise production setup
+- `docs/NAV_INDEX.md` — navigable repository index
+
 ### Generated Documentation
 Every MVP includes:
 - 📖 **Complete README** with setup instructions
@@ -232,6 +238,8 @@ Every MVP includes:
 - **Document Upload**: Analyze existing business plans
 - **Team Collaboration**: Multi-founder workflow support
 - **Advanced Analytics**: Predictive business intelligence
+
+See also: `docs/SOURCE_OF_TRUTH.md` and `docs/LEGACY_COMPONENTS.md` for navigation and legacy context.
 
 ### Long-Term Vision
 - **Industry Specialization**: Deeper vertical expertise
