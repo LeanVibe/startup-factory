@@ -131,6 +131,25 @@ class SmartCodeGenerator:
         Focus on the BUSINESS VALUE, not just technical operations.
         """
         
+        # Prefer AIProviderManager when available; fallback to direct client and then static fallback
+        try:
+            from tools.ai_providers import create_default_provider_manager
+            from tools.core_types import Task, TaskType, generate_task_id
+            pm = create_default_provider_manager()
+            task = Task(
+                id=generate_task_id(),
+                startup_id=blueprint.project_id,
+                type=TaskType.CODE_GENERATION,
+                description="Generate intelligent business service (Python)",
+                prompt=prompt,
+                max_tokens=1800,
+            )
+            result = await pm.process_task(task)
+            if result.success and result.content:
+                return result.content
+        except Exception:
+            pass
+
         try:
             response = self.client.messages.create(
                 model="claude-3-sonnet-20241022",
@@ -585,6 +604,25 @@ class B2BSaaSBusinessService:
         Focus on INTELLIGENCE, not just templates.
         """
         
+        # Prefer AIProviderManager when available; fallback to direct client and then trivial components
+        try:
+            from tools.ai_providers import create_default_provider_manager
+            from tools.core_types import Task, TaskType, generate_task_id
+            pm = create_default_provider_manager()
+            task = Task(
+                id=generate_task_id(),
+                startup_id=blueprint.project_id,
+                type=TaskType.CODE_GENERATION,
+                description="Generate intelligent Lit components",
+                prompt=prompt,
+                max_tokens=1500,
+            )
+            result = await pm.process_task(task)
+            if result.success and result.content:
+                return result.content
+        except Exception:
+            pass
+
         try:
             response = self.client.messages.create(
                 model="claude-3-sonnet-20241022",
