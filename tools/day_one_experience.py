@@ -52,6 +52,7 @@ except ImportError as e:
 from .founder_interview_system import FounderInterviewAgent, BusinessBlueprint
 from .business_blueprint_generator import BusinessLogicGenerator
 from .smart_code_generator import SmartCodeGenerator
+from .analytics_engine import AnalyticsEngine
 
 console = Console()
 
@@ -64,6 +65,7 @@ class DayOneExperience:
         self.docker_client = self._setup_docker()
         self.session_start = datetime.now()
         self.progress_log = []
+        self.analytics = AnalyticsEngine()
         
     def _setup_anthropic(self) -> Optional[anthropic.Anthropic]:
         """Setup Anthropic client with graceful fallback"""
@@ -94,28 +96,38 @@ class DayOneExperience:
         """Complete Day One Experience workflow"""
         
         self._show_welcome_screen()
+        await self._log_event("experience_started", phase="welcome")
         
         # Phase 1: AI Architect Interview (15 minutes)
         console.print("\n[bold blue]🤖 Phase 1: AI Architect Interview[/bold blue]")
+        await self._log_event("phase_started", phase="interview")
         blueprint = await self._conduct_founder_interview()
         self._log_progress("Founder interview completed", 25)
+        await self._log_event("phase_completed", phase="interview", details={"project_id": blueprint.project_id})
         
         # Phase 2: Business Intelligence Generation (2 minutes) 
         console.print("\n[bold blue]🧠 Phase 2: Business Intelligence Generation[/bold blue]")
+        await self._log_event("phase_started", phase="intelligence")
         business_logic = await self._generate_business_intelligence(blueprint)
         self._log_progress("Business logic generated", 45)
+        await self._log_event("phase_completed", phase="intelligence")
         
         # Phase 3: Smart Code Generation (5 minutes)
         console.print("\n[bold blue]⚡ Phase 3: Smart Code Generation[/bold blue]")
+        await self._log_event("phase_started", phase="code_generation")
         project_path = await self._generate_complete_mvp(blueprint, business_logic)
         self._log_progress("MVP code generated", 75)
+        await self._log_event("phase_completed", phase="code_generation", details={"project_path": str(project_path)})
         
         # Phase 4: Live Deployment (3 minutes)
         console.print("\n[bold blue]🚀 Phase 4: Live Deployment[/bold blue]")
+        await self._log_event("phase_started", phase="deployment")
         deployment_result = await self._deploy_live_mvp(project_path, blueprint)
         # Persist deployment metadata for later reference
         await self._write_project_metadata(project_path, blueprint, deployment_result)
         self._log_progress("MVP deployed live", 100)
+        await self._log_event("phase_completed", phase="deployment", details=deployment_result)
+        await self._track_startup_completion(blueprint, deployment_result)
         
         # Success celebration and next steps
         return await self._celebrate_success(blueprint, deployment_result)
@@ -653,6 +665,31 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
         out = project_path / "project.json"
         with open(out, "w") as f:
             json.dump(meta, f, indent=2)
+        await self._log_event("metadata_written", phase="deployment", details=meta)
+
+    async def _track_startup_completion(self, blueprint: BusinessBlueprint, deployment_result: Dict[str, Any]) -> None:
+        """Store a startup record for analytics reporting."""
+        duration = (datetime.now() - self.session_start).total_seconds() / 60.0
+        data = {
+            "id": blueprint.project_id,
+            "name": blueprint.solution_concept.core_value_proposition,
+            "industry": blueprint.industry_vertical.value,
+            "category": blueprint.business_model.value,
+            "created_at": self.session_start.isoformat(),
+            "completed_at": datetime.now().isoformat(),
+            "status": "completed",
+            "duration_minutes": duration,
+            "api_costs": {},
+            "success_score": 0.95 if deployment_result.get("status") == "success" else 0.5,
+        }
+        self.analytics.track_startup_creation(data)
+        await self._log_event("startup_tracked", phase="analytics", details={"duration_minutes": duration})
+
+    async def _log_event(self, event_type: str, phase: str, details: Dict[str, Any] | None = None) -> None:
+        try:
+            self.analytics.db.log_event(event_type=event_type, startup_id=None, phase=phase, details=details or {})
+        except Exception:
+            pass
     
     async def _celebrate_success(self, blueprint: BusinessBlueprint, deployment_result: Dict[str, Any]) -> Dict[str, Any]:
         """Celebrate successful Day One Experience"""
