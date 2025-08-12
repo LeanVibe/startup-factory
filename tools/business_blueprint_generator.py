@@ -811,14 +811,20 @@ def create_access_token(data: dict, expires_minutes: int = ACCESS_TOKEN_EXPIRE_M
             description="Password hashing and JWT helpers"
         ))
 
-        # App settings (simple placeholder for env access)
-        config_py = '''from pydantic import BaseSettings
+        # App settings (with security defaults)
+        config_py = '''from pydantic import BaseSettings, Field
+from typing import List
 
 
 class Settings(BaseSettings):
     database_url: str | None = None
-    secret_key: str = "change-me"
+    secret_key: str = Field("change-me", description="Secret key for application")
     debug: bool = False
+
+    cors_allow_origins: List[str] = Field(default_factory=lambda: ["http://localhost", "http://localhost:5173"])
+    max_request_body_bytes: int = 5 * 1024 * 1024  # 5MB
+    rate_limit_requests: int = 100
+    rate_limit_window_seconds: int = 60
 
     class Config:
         env_file = ".env"
@@ -830,6 +836,77 @@ settings = Settings()
             file_path="backend/app/core/config.py",
             content=config_py,
             description="Application configuration via pydantic settings"
+        ))
+
+        # Security middleware modules
+        middleware_security = '''from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("X-XSS-Protection", "1; mode=block")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault("Content-Security-Policy", "default-src 'self'")
+        return response
+
+
+class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app: ASGIApp, max_body_bytes: int) -> None:
+        super().__init__(app)
+        self.max_body_bytes = max_body_bytes
+
+    async def dispatch(self, request, call_next):
+        body = await request.body()
+        if len(body) > self.max_body_bytes:
+            from starlette.responses import PlainTextResponse
+            return PlainTextResponse("Request body too large", status_code=413)
+        return await call_next(request)
+
+
+class AuditLogMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        # Hook for audit logging (PII redaction can be added here)
+        response = await call_next(request)
+        return response
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/middleware/security.py",
+            content=middleware_security,
+            description="Security headers, request size limit, and audit log middleware"
+        ))
+
+        middleware_rate = '''import time
+from collections import defaultdict, deque
+from starlette.middleware.base import BaseHTTPMiddleware
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app, requests: int = 100, window_seconds: int = 60):
+        super().__init__(app)
+        self.requests = requests
+        self.window = window_seconds
+        self._hits = defaultdict(deque)
+
+    async def dispatch(self, request, call_next):
+        key = request.client.host if request.client else "global"
+        now = time.time()
+        dq = self._hits[key]
+        while dq and now - dq[0] > self.window:
+            dq.popleft()
+        if len(dq) >= self.requests:
+            from starlette.responses import PlainTextResponse
+            return PlainTextResponse("Too Many Requests", status_code=429)
+        dq.append(now)
+        return await call_next(request)
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/middleware/rate_limit.py",
+            content=middleware_rate,
+            description="Naive in-memory rate limiter"
         ))
 
         return artifacts
