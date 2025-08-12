@@ -1014,6 +1014,36 @@ class StorageService:
             description="S3-compatible storage service"
         ))
 
+        # Files API for uploads
+        files_api = '''from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
+from app.services.storage_service import StorageService
+from app.api.auth import get_current_user
+
+
+router = APIRouter()
+
+
+@router.post("/upload")
+async def upload_file(
+    file: UploadFile = File(...),
+    current_user = Depends(get_current_user),
+):
+    try:
+        data = await file.read()
+        key = f"uploads/{current_user.id}/{file.filename}"
+        StorageService().put_object(key, data, content_type=file.content_type)
+        return {"key": key}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/api/files.py",
+            content=files_api,
+            description="File upload endpoint",
+            dependencies=["fastapi"],
+            is_business_logic=False
+        ))
+
         return artifacts
 
     async def _generate_alembic_scaffold(self, blueprint: BusinessBlueprint) -> List[CodeArtifact]:

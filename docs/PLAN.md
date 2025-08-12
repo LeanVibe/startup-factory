@@ -1,223 +1,89 @@
-# Startup Factory Development Plan - POST TRANSFORMATION
+# Next Epics Detailed Plan (Security, Jobs/Files/Email, Deployers, Regen)
 
-**Status**: 🎉 **TRANSFORMATION COMPLETE - Founder-Focused AI System Live**
+This document captures the missing details and concrete tasks for the next four epics. It serves as the source of truth for implementation and acceptance.
 
-**Created**: July 5, 2025  
-**Transformed**: August 10, 2025  
-**Target**: ✅ **100% COMPLETE - AI-Powered Simplicity Achieved**
+## Epic 1 — Production‑grade identity, auth, and RBAC
 
-## 🚀 TRANSFORMATION SUMMARY
+### Goals
+- Enforce real JWT verification for access tokens
+- Support access/refresh rotation, basic refresh flow
+- Add email verification and password reset flows
+- Introduce role/permission model (RBAC) and dependency helpers
 
-**STRATEGIC SHIFT COMPLETED**: From complex technical infrastructure to founder-focused AI system.
+### Deliverables
+- `backend/app/core/rbac.py`: `Role` enum (owner, admin, member), `require_roles` dependency
+- Update generated `User` model: `role: Optional[str]` (default `member`), `is_verified: bool`
+- Update auth endpoints:
+  - `/login` → return access + refresh (already implemented)
+  - `/refresh` → issue new access (already implemented)
+  - `/request-verify`, `/verify` (implemented)
+  - `/request-reset`, `/reset` (implemented)
+- Middleware/dependencies enforce JWT verification in `get_current_user` (implemented)
+- Optional: token blacklist store + rotation hooks (out of scope for first pass)
 
-### BEFORE: Complex Infrastructure (92% Complete)
-- 95+ files across multiple directories
-- 1,296-line orchestrator script (`mvp_orchestrator_script.py`)
-- Complex agent routing and management systems
-- Technical expertise required for operation
-- Multi-week development cycles
+### Acceptance
+- New projects:
+  - Successful register → login → access protected endpoint
+  - Verify and reset endpoints work in happy path
+  - RBAC helper available and wired for easy use in endpoints
 
-### AFTER: Founder-Focused Experience (100% Complete)
-- **6 core AI modules** with intelligent conversation interface
-- **Single command operation**: `python startup_factory.py`
-- **25-minute idea-to-MVP pipeline** with zero technical knowledge required
-- **Production-ready output** from day one
-- **70% complexity reduction** while improving functionality
+## Epic 2 — Background jobs, file uploads, and email
 
----
+### Goals
+- Async job infrastructure with Redis + RQ
+- File upload pipeline with S3-compatible storage
+- Email sending abstraction with SMTP default
 
-## 🎯 CURRENT SYSTEM ARCHITECTURE
+### Deliverables
+- `backend/app/worker/worker.py`: RQ worker entrypoint, example job
+- docker-compose: add `worker` service (uses same container / depends on redis)
+- `backend/app/services/storage_service.py` (implemented) and `backend/app/api/files.py` (upload endpoint)
+- `backend/app/services/email_service.py` with SMTP minimal send
+- Extended `.env.template` with S3 + SMTP settings (implemented)
 
-### 🧠 Core AI Components (100% Complete)
+### Acceptance
+- New projects:
+  - Upload endpoint accepts file (<= size limit) and stores to S3-compatible backend (or noop if not configured)
+  - Sample job enqueued and visible in logs via worker
+  - Email service stub returns success; replaceable with provider credentials
 
-✅ **Founder Interview System** (`tools/founder_interview_system.py`)
-- AI Architect Agent conducts intelligent 15-minute business conversations
-- Real-time follow-up question generation using Claude API
-- Business model classification and industry vertical analysis
-- Technical specification generation from natural language
+## Epic 3 — Cloud deployers, domain/TLS automation
 
-✅ **Business Blueprint Generator** (`tools/business_blueprint_generator.py`)  
-- Converts founder conversations into comprehensive technical specifications
-- Generates business-specific code with industry compliance (HIPAA, PCI, FERPA, GDPR)
-- Creates production-ready architecture with security and performance optimization
-- Industry-specific business logic generation
+### Goals
+- Abstract deployers and provide first provider skeletons
+- Keep tunnels as fallback
 
-✅ **Smart Code Generator** (`tools/smart_code_generator.py`)
-- Generates actual business intelligence, not just templates
-- Creates industry-specific compliance frameworks
-- Builds advanced analytics engines with real business metrics
-- Automated testing suite generation
+### Deliverables
+- `tools/deployers/__init__.py`, `base.py`, `fly.py`, `render.py` (skeletons returning clear TODOs)
+- Selection flag in `day_one_experience` (ENV: `DEPLOY_TARGET` = local|tunnel|fly|render)
+- Metadata persistence extended with deployer info
 
-✅ **Streamlined MVP Orchestrator** (`tools/streamlined_mvp_orchestrator.py`)
-- Simplified from 1,296 lines to <200 lines (70% complexity reduction)
-- Integrates all AI systems in clean, efficient workflow
-- Eliminates orchestration bloat while improving functionality
+### Acceptance
+- Running with `DEPLOY_TARGET=tunnel` still works (existing), selecting `fly|render` returns actionable message + generated manifests (future step)
 
-✅ **Day One Experience** (`tools/day_one_experience.py`)
-- Complete 25-minute idea-to-deployment pipeline
-- Automated Docker deployment with live URL generation
-- Real-time progress tracking and celebration
-- Production-ready MVPs with admin dashboards
+## Epic 4 — Regeneration/diffing and migrations assist
 
-✅ **Unified Interface** (`startup_factory.py`)
-- Single entry point replaces complex infrastructure
-- Interactive menu system for different founder needs
-- Zero technical knowledge required
+### Goals
+- Safe regeneration without clobbering user changes
+- Migration assistance stub for model diffs
 
----
+### Deliverables
+- Orchestrator safe-write: if file exists, write `*.new` and collect conflicts list
+- Generation summary lists conflicts
+- Stub `tools/migrations_helper.py` that explains next steps to create Alembic revisions
 
-## 📊 TRANSFORMATION METRICS
+### Acceptance
+- Re-running generator on existing project does not overwrite files; `.new` files are produced and summarized
 
-| Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
-| **Files Count** | 95+ files | 6 core modules | 84% reduction |
-| **Code Complexity** | 1,296 lines | ~200 lines core | 70% reduction |
-| **Time to MVP** | Hours/Days | 25 minutes | 10x faster |
-| **Technical Knowledge** | Expert required | Zero required | 100% accessible |
-| **Success Rate** | Variable | 95%+ | Consistent delivery |
-| **Setup Time** | Hours | 1 command | Instant |
-
----
-
-## 🎯 THE FOUNDER PROMISE (DELIVERED)
-
-**"Talk to me for 15 minutes, get a live MVP in 25 minutes total."**
-
-### Complete Workflow (25 Minutes)
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   AI Interview  │ -> │ Business Logic  │ -> │  Code Generate  │ -> │ Live Deployment │
-│   (15 minutes)  │    │   (2 minutes)   │    │  (5 minutes)    │    │  (3 minutes)    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘    └─────────────────┘
-```
-
-### What Founders Get
-- 🌍 **Live MVP** with public URL for immediate customer validation
-- 📊 **Admin dashboard** with real analytics and business intelligence  
-- 📚 **Complete documentation** and API documentation
-- 🔒 **Production-ready** security, compliance, and performance
-- 🐳 **Docker deployment** configuration ready for scaling
-- 💼 **Business logic** tailored to specific business model and industry
+## Rollout & QA
+- Unit tests remain green
+- Add minimal unit to assert presence of new scaffold files (files API, worker entry)
+- Manual smoke of generated project
 
 ---
 
-## 🚀 QUICK START FOR FOUNDERS
-
-### Prerequisites (Auto-Checked)
-- Python 3.10+ (system validation included)
-- Docker (automatic setup validation)
-- Anthropic API key (guided setup process)
-
-### One-Command Launch
-```bash
-python startup_factory.py
-```
-
-### Menu Options
-1. **🎯 Full Day One Experience** (25 min) - Complete idea-to-deployment
-2. **🤖 Founder Interview Only** (15 min) - Business blueprint generation
-3. **📊 System Status Check** (1 min) - Health and readiness validation
-4. **🎥 Show Demonstration** (5 min) - System capabilities overview
-
----
-
-## 📈 SUCCESS METRICS & VALIDATION
-
-### Founder Success Metrics
-- **Time to First Customer**: <48 hours (from idea)
-- **Validation Speed**: Immediate with live URL
-- **Technical Debt**: Zero (production-ready from day one)
-- **Customer Feedback Loop**: Real-time analytics included
-
-### System Performance Metrics  
-- **Interview Completion Rate**: 98% (AI conversation success)
-- **Deployment Success Rate**: 95% (automated Docker deployment)
-- **Code Quality Score**: A+ (automated testing and compliance)
-- **Founder Satisfaction**: 94% (zero technical knowledge required)
-
----
-
-## 🛠 SYSTEM MAINTENANCE & UPDATES
-
-### Automated Health Checks
-- AI API connectivity and performance monitoring
-- Docker environment validation
-- Code generation quality assurance
-- Deployment pipeline health
-
-### Update Process
-- Seamless updates through unified interface
-- Backward compatibility maintained
-- Founder workflow never interrupted
-- Continuous improvement based on usage analytics
-
----
-
-## 🎯 NEXT PHASE OPPORTUNITIES
-
-### Immediate Extensions (Post-MVP)
-1. **Multi-Modal Input**: Voice conversations, document upload
-2. **Advanced Analytics**: Predictive business intelligence  
-3. **Integration Marketplace**: Third-party service connections
-4. **Team Collaboration**: Multi-founder workflow support
-
-### Strategic Expansions
-1. **Industry Specialization**: Deeper vertical intelligence
-2. **Global Deployment**: Multi-region and multi-language support
-3. **Enterprise Features**: Advanced compliance and governance
-4. **AI Model Evolution**: Custom fine-tuning for specific business models
-
----
-
-## 🏆 LEGACY SYSTEM DEPRECATION
-
-### Deprecated Components (Post-Transformation)
-- ❌ Complex multi-file orchestration system
-- ❌ Technical configuration requirements  
-- ❌ Manual template selection and customization
-- ❌ Complex agent routing and management
-- ❌ Technical expertise dependencies
-
-### Migration Notes
-- All legacy functionality preserved in new AI-powered workflow
-- Zero data loss during transformation
-- Improved performance and reliability
-- Enhanced founder experience with same core capabilities
-
----
-
-## 📚 DOCUMENTATION STRUCTURE
-
-### Core Documentation
-- `TRANSFORMATION_COMPLETE.md` - Complete transformation summary
-- `startup_factory.py` - Unified entry point with built-in help
-- `tools/` - Individual AI component documentation
-- `CLAUDE.md` - Development guidelines (updated for new system)
-
-### Founder Resources
-- Interactive help system built into `startup_factory.py`
-- Real-time guidance through AI conversation
-- Automatic documentation generation for each MVP
-- Community examples and success stories
-
----
-
-## ✅ COMPLETION CHECKLIST
-
-- [x] **Core Transformation**: 6 AI components implemented and validated
-- [x] **Complexity Reduction**: 70% reduction achieved (1,296 → ~200 lines)
-- [x] **Founder Experience**: Zero technical knowledge requirement achieved
-- [x] **Performance**: 25-minute idea-to-MVP pipeline validated
-- [x] **Quality**: Production-ready output with security and compliance
-- [x] **Documentation**: Complete transformation documentation
-- [x] **Validation**: All components tested and functional
-- [x] **Deployment**: Live system ready for founder use
-
-**🎉 STATUS: TRANSFORMATION COMPLETE - READY FOR FOUNDERS**
-
----
-
-*The Startup Factory has evolved from a complex technical platform to an intelligent AI system that puts founders first. Zero technical knowledge required. Just bring your business idea and get a live MVP in 25 minutes.*
-
-**Ready to build your next startup?**
-Run: `python startup_factory.py`
+## Implementation Notes
+- Start with RBAC + files/email/jobs scaffolding in generator
+- Add compose worker service and verify references
+- Integrate safe-write in orchestrator to protect existing files
+- Deployer skeletons for future provider-specific integration

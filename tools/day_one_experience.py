@@ -528,8 +528,9 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
         """Setup public access. Prefer tunnel providers if available, fallback to localhost."""
         
         # Preferred: Cloudflare Tunnel if cloudflared is installed and enabled
-        use_cloudflare = os.getenv("ENABLE_CLOUDFLARE_TUNNEL") == "1"
-        use_ngrok = os.getenv("ENABLE_NGROK_TUNNEL") == "1" and os.getenv("NGROK_AUTHTOKEN")
+        target = os.getenv("DEPLOY_TARGET", "tunnel").lower()
+        use_cloudflare = (os.getenv("ENABLE_CLOUDFLARE_TUNNEL") == "1") or target == "tunnel"
+        use_ngrok = (os.getenv("ENABLE_NGROK_TUNNEL") == "1") and os.getenv("NGROK_AUTHTOKEN")
         
         if use_cloudflare and shutil.which("cloudflared"):
             url = await self._start_cloudflare_tunnel()

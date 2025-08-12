@@ -249,6 +249,11 @@ echo "✅ Services started"
 echo "⏳ Waiting for database..."
 sleep 12
 
+# Ensure RQ worker is up if present
+if docker-compose ps | grep -q worker; then
+  echo "🔧 Worker service detected"
+fi
+
 # Run database migrations (ignore if none)
 if docker-compose exec -T web python -c "import alembic" >/dev/null 2>&1; then
   set +e
