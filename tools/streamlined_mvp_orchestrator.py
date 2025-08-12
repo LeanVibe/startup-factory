@@ -128,6 +128,7 @@ class StreamlinedOrchestrator:
             (project_path / "docs").mkdir(exist_ok=True)
             progress.advance(task)
             
+            plan = []
             # Write all generated code files (safe-write)
             for artifact in artifacts:
                 file_path = project_path / artifact.file_path
@@ -137,6 +138,9 @@ class StreamlinedOrchestrator:
                     # Safe-write to .new and record conflict
                     target_path = file_path.with_suffix(file_path.suffix + ".new")
                     conflicts.append((str(file_path), str(target_path)))
+                    plan.append({"path": str(file_path), "action": "conflict", "write": str(target_path)})
+                else:
+                    plan.append({"path": str(file_path), "action": "create"})
                 with open(target_path, 'w') as f:
                     f.write(artifact.content)
                 
@@ -152,6 +156,17 @@ class StreamlinedOrchestrator:
             console.print("[yellow]⚠️  Safe-write conflicts detected:[/yellow]")
             for orig, new in conflicts:
                 console.print(f" - {orig} -> {new}")
+            # Write conflicts summary
+            import json as _json
+            with open(project_path / "conflicts.json", "w") as _f:
+                _json.dump({"conflicts": [{"original": o, "new": n} for o, n in conflicts]}, _f, indent=2)
+        # Always write plan
+        try:
+            import json as _json
+            with open(project_path / "plan.json", "w") as _f:
+                _json.dump({"artifacts": plan}, _f, indent=2)
+        except Exception:
+            pass
         return project_path
     
     async def _generate_essential_configs(self, project_path: Path, blueprint: BusinessBlueprint):

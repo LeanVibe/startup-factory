@@ -268,6 +268,7 @@ class DayOneExperience:
             
             progress.advance(task)
             
+            plan = []
             # Write all generated files (safe-write)
             for artifact in artifacts:
                 file_path = project_path / artifact.file_path
@@ -275,6 +276,9 @@ class DayOneExperience:
                 target = file_path
                 if file_path.exists():
                     target = file_path.with_suffix(file_path.suffix + ".new")
+                    plan.append({"path": str(file_path), "action": "conflict", "write": str(target)})
+                else:
+                    plan.append({"path": str(file_path), "action": "create"})
                 with open(target, 'w') as f:
                     f.write(artifact.content)
                 
@@ -290,6 +294,7 @@ class DayOneExperience:
                     target = module_file.with_suffix(module_file.suffix + ".new")
                 with open(target, 'w') as f:
                     f.write(module_code)
+            plan.append({"path": str(module_file), "action": "create" if target == module_file else "conflict", "write": (None if target == module_file else str(target))})
             
             progress.advance(task)
             
@@ -309,6 +314,20 @@ class DayOneExperience:
             progress.advance(task)
         
         console.print(f"[green]✅ Complete MVP generated at: {project_path}[/green]")
+        # Write plan and conflicts summary if any .new files exist
+        try:
+            import json as _json
+            conflicts = []
+            for entry in plan:
+                if entry.get('action') == 'conflict':
+                    conflicts.append({"original": entry['path'], "new": entry['write']})
+            with open(project_path / "plan.json", 'w') as f:
+                _json.dump({"artifacts": plan}, f, indent=2)
+            if conflicts:
+                with open(project_path / "conflicts.json", 'w') as f:
+                    _json.dump({"conflicts": conflicts}, f, indent=2)
+        except Exception:
+            pass
         return project_path
     
     async def _deploy_live_mvp(self, project_path: Path, blueprint: BusinessBlueprint) -> Dict[str, Any]:
