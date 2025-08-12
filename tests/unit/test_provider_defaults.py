@@ -1,9 +1,12 @@
 import asyncio
 from datetime import datetime
+import os
+import sys
+import types
 
 import pytest
 
-from tools.ai_providers import AIProviderManager, ProviderConfig, AIProviderInterface
+from tools.ai_providers import AIProviderManager, ProviderConfig, AIProviderInterface, create_default_provider_manager
 from tools.core_types import Task, TaskType, TaskResult
 
 
@@ -94,3 +97,21 @@ async def test_process_task_errors_if_anthropic_not_configured():
 
     assert result.success is False
     assert "Anthropic provider not configured" in (result.error_message or "")
+
+
+def test_create_default_provider_manager_registers_only_anthropic_by_default(monkeypatch):
+    # Set both keys to simulate environment
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "ant-key")
+    monkeypatch.setenv("OPENAI_API_KEY", "open-key")
+    # Ensure multi-providers disabled
+    monkeypatch.delenv("ALLOW_MULTI_PROVIDERS", raising=False)
+
+    # Monkeypatch tools.ai_providers.openai to stub so registration would be possible
+    import tools.ai_providers as mod
+    mod.openai = types.SimpleNamespace(AsyncOpenAI=object)
+
+    manager = create_default_provider_manager()
+
+    assert "anthropic" in manager.get_available_providers()
+    # OpenAI should NOT be registered by default
+    assert "openai" not in manager.get_available_providers()
