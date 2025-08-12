@@ -930,6 +930,52 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             description="Naive in-memory rate limiter"
         ))
 
+        # Email service stub
+        email_service = '''from typing import Optional, Dict
+
+
+class EmailService:
+    def __init__(self, provider: str = "smtp", config: Optional[Dict] = None) -> None:
+        self.provider = provider
+        self.config = config or {}
+
+    async def send_email(self, to_email: str, subject: str, body: str) -> bool:
+        # TODO: Implement provider-specific sending (SMTP/API)
+        # For now, assume success in demo mode
+        return True
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/services/email_service.py",
+            content=email_service,
+            description="Email service abstraction"
+        ))
+
+        # Storage service stub (S3-compatible)
+        storage_service = '''from typing import Optional
+import boto3
+import os
+
+
+class StorageService:
+    def __init__(self):
+        self._client = boto3.client(
+            's3',
+            endpoint_url=os.getenv('S3_ENDPOINT_URL') or None,
+            aws_access_key_id=os.getenv('S3_ACCESS_KEY') or None,
+            aws_secret_access_key=os.getenv('S3_SECRET_KEY') or None,
+        )
+        self.bucket = os.getenv('S3_BUCKET') or ''
+
+    def put_object(self, key: str, data: bytes, content_type: str = 'application/octet-stream') -> str:
+        self._client.put_object(Bucket=self.bucket, Key=key, Body=data, ContentType=content_type)
+        return key
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/services/storage_service.py",
+            content=storage_service,
+            description="S3-compatible storage service"
+        ))
+
         return artifacts
 
     async def _generate_alembic_scaffold(self, blueprint: BusinessBlueprint) -> List[CodeArtifact]:
