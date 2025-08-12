@@ -301,6 +301,16 @@ python startup_factory.py
 
 ---
 
+## 🗒️ Changelog
+
+- Consolidated docs; added `docs/SOURCE_OF_TRUTH.md` and `docs/LEGACY_COMPONENTS.md`
+- Rewrote `PRODUCTION_SETUP.md`, updated `docs/AGENT_ONBOARDING.md`
+- Deprecated `docs/DETAILED_EXECUTION_PLAN.md`; refreshed transformation reports
+- Defaulted AI provider to Anthropic in `tools/ai_providers.py`; legacy providers opt-in via `ALLOW_MULTI_PROVIDERS=1`
+- Regenerated repository index (`docs/NAV_INDEX.md`, `docs/nav_index.json`)
+
+---
+
 *Built with ❤️ by Claude Code and powered by the belief that every founder deserves the tools to build their vision, regardless of technical background.*
 
 [![Built with Claude](https://img.shields.io/badge/Built%20with-Claude%20Code-blue?logo=anthropic)](#)
