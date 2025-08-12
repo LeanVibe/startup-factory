@@ -113,6 +113,8 @@ class DayOneExperience:
         # Phase 4: Live Deployment (3 minutes)
         console.print("\n[bold blue]🚀 Phase 4: Live Deployment[/bold blue]")
         deployment_result = await self._deploy_live_mvp(project_path, blueprint)
+        # Persist deployment metadata for later reference
+        await self._write_project_metadata(project_path, blueprint, deployment_result)
         self._log_progress("MVP deployed live", 100)
         
         # Success celebration and next steps
@@ -511,27 +513,101 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
             console.print("[yellow]Warning: Database migration timed out[/yellow]")
     
     async def _setup_public_access(self, blueprint: BusinessBlueprint) -> str:
-        """Setup public access (for demo, use localhost)"""
+        """Setup public access. Prefer tunnel providers if available, fallback to localhost."""
         
-        # In production, this would setup ngrok, cloudflare tunnels, or deploy to cloud
-        # For Day One Experience demo, we'll use localhost
+        # Preferred: Cloudflare Tunnel if cloudflared is installed and enabled
+        use_cloudflare = os.getenv("ENABLE_CLOUDFLARE_TUNNEL") == "1"
+        use_ngrok = os.getenv("ENABLE_NGROK_TUNNEL") == "1" and os.getenv("NGROK_AUTHTOKEN")
+        
+        if use_cloudflare and shutil.which("cloudflared"):
+            url = await self._start_cloudflare_tunnel()
+            if url:
+                return url
+        
+        if use_ngrok and shutil.which("ngrok"):
+            url = await self._start_ngrok_tunnel()
+            if url:
+                return url
+        
+        # Fallback: localhost
         public_url = "http://localhost:8000"
-        
-        # Verify service is accessible
-        max_retries = 30
-        for attempt in range(max_retries):
-            try:
-                import requests
-                response = requests.get(f"{public_url}/health", timeout=5)
-                if response.status_code == 200:
-                    break
-            except:
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(2)
-                else:
-                    raise Exception("Service failed to start")
-        
+        await self._wait_for_health(public_url)
         return public_url
+
+    async def _wait_for_health(self, base_url: str, timeout_seconds: int = 60) -> None:
+        """Poll the /health endpoint until it returns 200 or timeout."""
+        import time as _time
+        import requests
+        deadline = _time.time() + timeout_seconds
+        while _time.time() < deadline:
+            try:
+                resp = requests.get(f"{base_url}/health", timeout=5)
+                if resp.status_code == 200:
+                    return
+            except Exception:
+                pass
+            await asyncio.sleep(2)
+        raise Exception(f"Service at {base_url} failed health check")
+
+    async def _start_cloudflare_tunnel(self) -> Optional[str]:
+        """Start a Cloudflare tunnel to localhost:8000 and capture the URL."""
+        try:
+            proc = subprocess.Popen(
+                ["cloudflared", "tunnel", "--url", "http://localhost:8000", "--no-autoupdate"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True
+            )
+            # Read lines until public URL appears or timeout
+            import time as _time
+            start = _time.time()
+            while _time.time() - start < 30:
+                line = proc.stdout.readline()
+                if not line:
+                    await asyncio.sleep(0.2)
+                    continue
+                if "trycloudflare.com" in line or "https://" in line:
+                    # Extract first https URL
+                    import re
+                    m = re.search(r"https://[\w.-]+", line)
+                    if m:
+                        url = m.group(0)
+                        await self._wait_for_health(url)
+                        return url
+            # Do not kill process here; user can manage lifecycle
+        except Exception:
+            pass
+        return None
+
+    async def _start_ngrok_tunnel(self) -> Optional[str]:
+        """Start an ngrok tunnel if configured and return public URL."""
+        try:
+            # Start ngrok http 8000
+            env = os.environ.copy()
+            env.setdefault("NGROK_CONFIG", "")
+            proc = subprocess.Popen(
+                ["ngrok", "http", "8000"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                env=env
+            )
+            # Parse URL from stdout
+            import time as _time, re
+            start = _time.time()
+            while _time.time() - start < 30:
+                line = proc.stdout.readline()
+                if not line:
+                    await asyncio.sleep(0.2)
+                    continue
+                m = re.search(r"https://[\w.-]+\.ngrok\.io", line)
+                if m:
+                    url = m.group(0)
+                    await self._wait_for_health(url)
+                    return url
+        except Exception:
+            pass
+        return None
     
     async def _run_health_checks(self, public_url: str) -> Dict[str, Any]:
         """Run comprehensive health checks"""
@@ -560,6 +636,23 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
             console.print(f"[yellow]Health check warning: {e}[/yellow]")
         
         return health_status
+
+    async def _write_project_metadata(self, project_path: Path, blueprint: BusinessBlueprint, deployment_result: Dict[str, Any]) -> None:
+        """Write project metadata for later reference (public URL, timestamps, health)."""
+        meta = {
+            "project_id": blueprint.project_id,
+            "created_at": datetime.now().isoformat(),
+            "public_url": deployment_result.get("public_url"),
+            "admin_url": deployment_result.get("admin_url"),
+            "api_docs_url": deployment_result.get("api_docs_url"),
+            "health_status": deployment_result.get("health_status"),
+            "business_model": blueprint.business_model.value,
+            "industry_vertical": blueprint.industry_vertical.value,
+            "features": blueprint.solution_concept.key_features,
+        }
+        out = project_path / "project.json"
+        with open(out, "w") as f:
+            json.dump(meta, f, indent=2)
     
     async def _celebrate_success(self, blueprint: BusinessBlueprint, deployment_result: Dict[str, Any]) -> Dict[str, Any]:
         """Celebrate successful Day One Experience"""
