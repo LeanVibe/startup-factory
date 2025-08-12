@@ -128,6 +128,14 @@ class DayOneExperience:
         self._log_progress("MVP deployed live", 100)
         await self._log_event("phase_completed", phase="deployment", details=deployment_result)
         await self._track_startup_completion(blueprint, deployment_result)
+        # Log deployer info and public url
+        try:
+            await self._log_event("deployer_info", phase="deployment", details={
+                "target": os.getenv("DEPLOY_TARGET", "tunnel"),
+                "public_url": deployment_result.get("public_url")
+            })
+        except Exception:
+            pass
         
         # Success celebration and next steps
         return await self._celebrate_success(blueprint, deployment_result)
@@ -720,6 +728,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
             "business_model": blueprint.business_model.value,
             "industry_vertical": blueprint.industry_vertical.value,
             "features": blueprint.solution_concept.key_features,
+            "deployer": os.getenv("DEPLOY_TARGET", "tunnel"),
         }
         out = project_path / "project.json"
         with open(out, "w") as f:
