@@ -354,9 +354,16 @@ class DayOneExperience:
             progress.update(task, description="Initializing database...", completed=60)
             await self._setup_database(project_path)
             
-            # Configure networking
+            # Configure networking / deploy target
             progress.update(task, description="Configuring public access...", completed=80)
             public_url = await self._setup_public_access(blueprint)
+            # Deploy to cloud target if requested
+            target = os.getenv("DEPLOY_TARGET", "tunnel").lower()
+            if target in ("fly", "render"):
+                from .deployers import get_deployer
+                deployer = get_deployer(target)
+                result = deployer.deploy(project_path, os.environ.copy())
+                public_url = result.get("public_url", public_url)
             
             # Health checks
             progress.update(task, description="Running health checks...", completed=95)
