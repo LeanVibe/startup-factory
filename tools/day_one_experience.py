@@ -41,12 +41,21 @@ try:
     from rich.layout import Layout
     from rich.align import Align
     from rich.live import Live
-    import docker
     import yaml
 except ImportError as e:
-    print(f"Missing dependency: {e}")
-    print("Install with: pip install anthropic rich docker pyyaml")
-    exit(1)
+    # Degrade gracefully in CI/unit tests; most flows can run without full deps
+    print(f"Missing optional dependency: {e}")
+    anthropic = None  # type: ignore
+    from typing import Any as Console  # dummy fallback if rich missing
+    Panel = object  # type: ignore
+    Progress = SpinnerColumn = TextColumn = BarColumn = TimeElapsedColumn = object  # type: ignore
+    Table = Layout = Align = Live = object  # type: ignore
+
+# Docker is optional; attempt import separately and degrade gracefully
+try:
+    import docker  # type: ignore
+except Exception:
+    docker = None  # type: ignore
 
 # Import our AI-powered components
 from .founder_interview_system import FounderInterviewAgent, BusinessBlueprint
