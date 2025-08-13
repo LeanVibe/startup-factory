@@ -26,4 +26,4 @@ jobs:
 
       - name: Run unit tests only
         run: |
-          make test-unit
+          python -m pytest tests/unit -q
