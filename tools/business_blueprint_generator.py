@@ -1383,6 +1383,7 @@ async def sign_upload(
 
         # Billing service (Stripe)
         billing_service = '''import os
+import json
 import stripe
 
 
@@ -1405,8 +1406,27 @@ class BillingService:
         return {"id": session.id, "url": session.url}
 
     def handle_webhook(self, payload: bytes, sig: str) -> dict:
-        # For demo: trust event; production should validate signature
-        return {"received": True}
+        # Minimal parser: no signature verification in CI
+        try:
+            event = json.loads(payload.decode('utf-8') or '{}')
+        except Exception:
+            event = {}
+        event_type = event.get('type', '')
+        data_obj = (event.get('data') or {}).get('object') or {}
+        updates = {}
+
+        if event_type == 'checkout.session.completed':
+            # set stripe_customer_id if present
+            cust = data_obj.get('customer') or data_obj.get('customer_id')
+            if cust:
+                updates['stripe_customer_id'] = cust
+        elif event_type in ('customer.subscription.updated', 'customer.subscription.created'):
+            sub_id = data_obj.get('id')
+            status = data_obj.get('status') or 'active'
+            updates['stripe_subscription_id'] = sub_id
+            updates['subscription_status'] = status
+
+        return {"received": True, "updates": updates, "type": event_type}
 '''
         artifacts.append(CodeArtifact(
             file_path="backend/app/services/billing_service.py",
@@ -1468,6 +1488,18 @@ async def stripe_webhook(request: Request):
 @router.get('/status')
 async def status(current_user = Depends(get_current_user)):
     return {"subscription_status": getattr(current_user, 'subscription_status', 'inactive')}
+
+
+@router.get('/plans')
+async def plans():
+    # Minimal static plans for feature flags
+    return {
+        "plans": [
+            {"id": "free", "features": ["basic"]},
+            {"id": "pro", "features": ["basic", "pro"]},
+            {"id": "enterprise", "features": ["basic", "pro", "enterprise"]},
+        ]
+    }
 '''
         artifacts.append(CodeArtifact(
             file_path="backend/app/api/billing.py",
