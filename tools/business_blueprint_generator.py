@@ -134,6 +134,8 @@ class BusinessLogicGenerator:
                 dependencies=["sqlalchemy", "pydantic"],
                 is_business_logic=True
             ))
+        # Organization model
+        artifacts.append(await self._generate_org_model(blueprint))
         
         return artifacts
     
@@ -190,6 +192,7 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     role = Column(String, default='member', nullable=False)
+    subscription_status = Column(String, default='inactive', nullable=False)
     failed_login_attempts = Column(Integer, default=0)
     locked_until = Column(DateTime, nullable=True)
     totp_secret = Column(String, nullable=True)
@@ -226,6 +229,31 @@ class UserResponse(BaseModel):
             dependencies=["sqlalchemy", "pydantic"],
             is_business_logic=True
         )
+
+    async def _generate_org_model(self, blueprint: BusinessBlueprint) -> CodeArtifact:
+        org_model = '''from sqlalchemy import Column, Integer, String, DateTime, Table, ForeignKey
+from datetime import datetime
+from app.db.database import Base
+
+
+user_organizations = Table(
+    'user_organizations', Base.metadata,
+    Column('user_id', Integer, ForeignKey('users.id'), primary_key=True),
+    Column('organization_id', Integer, ForeignKey('organizations.id'), primary_key=True)
+)
+
+
+class Organization(Base):
+    __tablename__ = 'organizations'
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+'''
+        return CodeArtifact(
+            file_path="backend/app/models/organization.py",
+            content=org_model,
+            description="Organization model and user mapping"
+        )
     
     async def _generate_entity_model(self, entity: Dict[str, Any], blueprint: BusinessBlueprint) -> str:
         """Generate SQLAlchemy model for a business entity"""
@@ -239,6 +267,8 @@ class UserResponse(BaseModel):
         
         columns.append("id = Column(Integer, primary_key=True, index=True)")
         pydantic_fields.append("id: Optional[int] = None")
+        columns.append("tenant_id = Column(Integer, index=True, nullable=True)")
+        pydantic_fields.append("tenant_id: Optional[int] = None")
         
         for attr in attributes:
             attr_name = attr['name']
@@ -358,6 +388,7 @@ from app.api.auth import get_current_user
 from app.api import auth
 from app.api import files
 from app.api import jobs
+from app.api import billing
 
 # Import business-specific routers
 '''
@@ -409,6 +440,9 @@ api_router.include_router(files.router, prefix="/files", tags=["files"])
 
 # Jobs routes
 api_router.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
+
+# Billing routes
+api_router.include_router(billing.router, prefix="/billing", tags=["billing"])
 '''
         
         return CodeArtifact(
@@ -677,6 +711,7 @@ from app.models.{entity_lower} import {entity_name}, {entity_name}Create, {entit
 from app.api.auth import get_current_user
 from app.db.database import get_db
 from app.core.rbac import require_roles
+from app.core.billing import require_active_subscription
 
 router = APIRouter()
 
@@ -708,11 +743,15 @@ async def create_{entity_lower}(
 ):
     """Create new {entity_lower}"""
     _ = await require_roles("admin", "owner")(current_user)
+    await require_active_subscription()(current_user)
     
     # Business-specific validation
     # TODO: Add business rules for {entity_lower} creation
     
-    db_{entity_lower} = {entity_name}(**{entity_lower}_data.dict())
+    data = {entity_lower}_data.dict()
+    if hasattr({entity_name}, 'tenant_id'):
+        data['tenant_id'] = current_user.id
+    db_{entity_lower} = {entity_name}(**data)
     
     # Associate with current user if applicable
     # db_{entity_lower}.user_id = current_user.id
@@ -755,6 +794,7 @@ async def update_{entity_lower}(
 ):
     """Update existing {entity_lower}"""
     _ = await require_roles("admin", "owner")(current_user)
+    await require_active_subscription()(current_user)
     
     db_{entity_lower} = db.query({entity_name}).filter({entity_name}.id == item_id).first()
     
@@ -1228,6 +1268,92 @@ async def sign_upload(
             description="File upload endpoint",
             dependencies=["fastapi"],
             is_business_logic=False
+        ))
+
+        # Billing service (Stripe)
+        billing_service = '''import os
+import stripe
+
+
+class BillingService:
+    def __init__(self):
+        api_key = os.getenv('STRIPE_SECRET_KEY')
+        self.enabled = bool(api_key)
+        if self.enabled:
+            stripe.api_key = api_key
+
+    def create_checkout_session(self, price_id: str, success_url: str, cancel_url: str) -> dict:
+        if not self.enabled:
+            return {"url": success_url}
+        session = stripe.checkout.Session.create(
+            mode='subscription',
+            line_items=[{'price': price_id, 'quantity': 1}],
+            success_url=success_url,
+            cancel_url=cancel_url,
+        )
+        return {"id": session.id, "url": session.url}
+
+    def handle_webhook(self, payload: bytes, sig: str) -> dict:
+        # For demo: trust event; production should validate signature
+        return {"received": True}
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/services/billing_service.py",
+            content=billing_service,
+            description="Stripe billing service"
+        ))
+
+        # Billing core helpers
+        billing_core = '''from fastapi import Depends, HTTPException, status
+
+
+def require_active_subscription():
+    async def dep(current_user = Depends(lambda: None)):
+        if current_user is None:
+            return None
+        status_val = getattr(current_user, 'subscription_status', 'inactive')
+        if status_val not in ('active', 'trialing'):
+            raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail='Subscription required')
+        return None
+    return dep
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/core/billing.py",
+            content=billing_core,
+            description="Billing dependencies"
+        ))
+
+        # Billing API
+        billing_api = '''from fastapi import APIRouter, Depends, Request
+from app.api.auth import get_current_user
+from app.services.billing_service import BillingService
+
+
+router = APIRouter()
+
+
+@router.post('/checkout')
+async def checkout(price_id: str, request: Request, current_user = Depends(get_current_user)):
+    base_url = str(request.base_url).rstrip('/')
+    svc = BillingService()
+    return svc.create_checkout_session(price_id, f"{base_url}/success", f"{base_url}/cancel")
+
+
+@router.post('/webhook')
+async def webhook(request: Request):
+    payload = await request.body()
+    svc = BillingService()
+    return svc.handle_webhook(payload, request.headers.get('stripe-signature',''))
+
+
+@router.get('/status')
+async def status(current_user = Depends(get_current_user)):
+    return {"subscription_status": getattr(current_user, 'subscription_status', 'inactive')}
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/api/billing.py",
+            content=billing_api,
+            description="Billing endpoints"
         ))
 
         # Jobs service
