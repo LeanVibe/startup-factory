@@ -458,6 +458,8 @@ from app.api import auth
 from app.api import files
 from app.api import jobs
 from app.api import billing
+from app.api import invitations
+from app.api import admin_orgs
 
 # Import business-specific routers
 '''
@@ -512,6 +514,10 @@ api_router.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
 
 # Billing routes
 api_router.include_router(billing.router, prefix="/billing", tags=["billing"])
+ 
+# Invitations and admin orgs routes
+api_router.include_router(invitations.router, prefix="/invitations", tags=["invitations"])
+api_router.include_router(admin_orgs.router, prefix="/admin", tags=["admin"])
 '''
         
         return CodeArtifact(
@@ -890,7 +896,8 @@ async def update_{entity_lower}(
     item_id: int,
     {entity_lower}_data: {entity_name}Create,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_tenant: int = Depends(require_tenant)
 ):
     """Update existing {entity_lower}"""
     _ = await require_roles("admin", "owner")(current_user)
