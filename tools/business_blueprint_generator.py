@@ -950,6 +950,8 @@ from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.idempotency import IdempotencyMiddleware
 from app.middleware.logging import StructuredLoggingMiddleware
 from app.core.metrics import init_metrics
+import logging
+from logging.handlers import RotatingFileHandler
 
 
 def create_app() -> FastAPI:
@@ -976,8 +978,20 @@ def create_app() -> FastAPI:
     async def health(_: Request):
         return {{"status": "healthy", "dependencies": {{}}}}
 
+    @app.get("/ready")
+    async def ready(_: Request):
+        return {{"ready": True}}
+
     app.include_router(api_router, prefix="/api")
     init_metrics(app)
+    try:
+        import os
+        os.makedirs('logs', exist_ok=True)
+        handler = RotatingFileHandler('logs/app.log', maxBytes=1_000_000, backupCount=3)
+        handler.setLevel(logging.INFO)
+        logging.getLogger('uvicorn.access').addHandler(handler)
+    except Exception:
+        pass
     return app
 
 
@@ -2588,6 +2602,43 @@ class {blueprint.business_model.value.replace('_', '').title()}BusinessLogic:
         
         artifacts = []
         
+        # Lint configuration
+        pyproject = '''[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = ["E","F","I"]
+ignore = ["E501"]
+'''
+        artifacts.append(CodeArtifact(
+            file_path="pyproject.toml",
+            content=pyproject,
+            description="Lint configuration"
+        ))
+
+        lint_wf = '''name: Lint
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run ruff (install via pipx)
+        run: |
+          pipx install ruff || pip install ruff
+          ruff --version || true
+'''
+        artifacts.append(CodeArtifact(
+            file_path=".github/workflows/lint.yml",
+            content=lint_wf,
+            description="Lint workflow"
+        ))
+
         # Generate Docker configuration
         dockerfile = self._generate_dockerfile(blueprint)
         artifacts.append(dockerfile)
@@ -2840,6 +2891,9 @@ jobs:
             content=yml,
             description="CI workflow for smoke testing"
         )
+
+        
+        
 
     def _generate_smoke_script(self, blueprint: BusinessBlueprint) -> CodeArtifact:
         """Generate a simple curl-based smoke test script"""
