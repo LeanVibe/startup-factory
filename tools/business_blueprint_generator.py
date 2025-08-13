@@ -1220,6 +1220,11 @@ class Settings(BaseSettings):
     rate_limit_requests: int = 100
     rate_limit_window_seconds: int = 60
 
+    # Compliance toggles (documentation-oriented; off by default)
+    enable_hipaa: bool = False
+    enable_pci: bool = False
+    enable_ferpa: bool = False
+
     class Config:
         env_file = ".env"
 
@@ -1245,6 +1250,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers.setdefault("X-XSS-Protection", "1; mode=block")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         response.headers.setdefault("Content-Security-Policy", "default-src 'self'")
+        # Compliance: When operating in regulated industries (HIPAA/PCI/FERPA),
+        # review and harden security headers and CSP appropriate to your environment.
         return response
 
 
@@ -1263,7 +1270,8 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
 
 class AuditLogMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        # Hook for audit logging (PII redaction can be added here)
+        # Compliance: Consider enabling audit logging for regulated data (HIPAA/PCI/FERPA)
+        # and ensure PII/PHI redaction is active in logging middleware.
         response = await call_next(request)
         return response
 '''
@@ -1276,6 +1284,7 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
         logging_mw = '''import uuid
 import time
 from starlette.middleware.base import BaseHTTPMiddleware
+from app.core.config import settings
 
 
 def redact_headers(headers: dict) -> dict:
@@ -1283,7 +1292,13 @@ def redact_headers(headers: dict) -> dict:
     safe: dict = {}
     for key, value in headers.items():
         lowered = key.lower()
-        if lowered in ('authorization', 'cookie', 'set-cookie'):
+        sensitive = {'authorization', 'cookie', 'set-cookie'}
+        # Expand redaction when PCI/HIPAA toggles are enabled
+        if getattr(settings, 'enable_pci', False):
+            sensitive.update({'stripe-signature', 'x-payment-token'})
+        if getattr(settings, 'enable_hipaa', False):
+            sensitive.update({'x-ssn', 'x-patient-id'})
+        if lowered in sensitive:
             safe[key] = 'REDACTED'
         else:
             safe[key] = value
