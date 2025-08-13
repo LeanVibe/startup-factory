@@ -905,6 +905,7 @@ from app.middleware.security import SecurityHeadersMiddleware, RequestSizeLimitM
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.idempotency import IdempotencyMiddleware
 from app.middleware.logging import StructuredLoggingMiddleware
+from app.core.metrics import init_metrics
 
 
 def create_app() -> FastAPI:
@@ -932,6 +933,7 @@ def create_app() -> FastAPI:
         return {{"status": "healthy", "dependencies": {{}}}}
 
     app.include_router(api_router, prefix="/api")
+    init_metrics(app)
     return app
 
 
@@ -1436,6 +1438,43 @@ async def status(current_user = Depends(get_current_user)):
             file_path="backend/app/api/billing.py",
             content=billing_api,
             description="Billing endpoints"
+        ))
+
+        # Prometheus metrics
+        metrics_core = '''from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from fastapi import APIRouter, Response
+import time
+
+
+REQUEST_COUNT = Counter('app_requests_total', 'Total HTTP requests', ['endpoint'])
+REQUEST_LATENCY = Histogram('app_request_latency_seconds', 'Request latency', ['endpoint'])
+router = APIRouter()
+
+
+def init_metrics(app):
+    @app.middleware('http')
+    async def metrics_middleware(request, call_next):
+        start = time.time()
+        response = await call_next(request)
+        endpoint = request.url.path
+        try:
+            REQUEST_COUNT.labels(endpoint=endpoint).inc()
+            REQUEST_LATENCY.labels(endpoint=endpoint).observe(time.time() - start)
+        except Exception:
+            pass
+        return response
+    app.include_router(router)
+
+
+@router.get('/metrics')
+async def metrics():
+    data = generate_latest()
+    return Response(content=data, media_type=CONTENT_TYPE_LATEST)
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/core/metrics.py",
+            content=metrics_core,
+            description="Prometheus metrics setup"
         ))
 
         # Org RBAC helper
