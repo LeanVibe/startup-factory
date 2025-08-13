@@ -136,6 +136,7 @@ class BusinessLogicGenerator:
             ))
         # Organization model
         artifacts.append(await self._generate_org_model(blueprint))
+        artifacts.append(await self._generate_invitation_model(blueprint))
         
         return artifacts
     
@@ -256,6 +257,28 @@ class Organization(Base):
             file_path="backend/app/models/organization.py",
             content=org_model,
             description="Organization model and user mapping"
+        )
+
+    async def _generate_invitation_model(self, blueprint: BusinessBlueprint) -> CodeArtifact:
+        invitation_model = '''from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from datetime import datetime
+from app.db.database import Base
+
+
+class Invitation(Base):
+    __tablename__ = 'invitations'
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, nullable=False, index=True)
+    code = Column(String, nullable=False, unique=True)
+    organization_id = Column(Integer, ForeignKey('organizations.id'), nullable=False)
+    role = Column(String, default='member')
+    created_at = Column(DateTime, default=datetime.utcnow)
+    accepted_at = Column(DateTime, nullable=True)
+'''
+        return CodeArtifact(
+            file_path="backend/app/models/invitation.py",
+            content=invitation_model,
+            description="Invitation model"
         )
     
     async def _generate_entity_model(self, entity: Dict[str, Any], blueprint: BusinessBlueprint) -> str:
@@ -1413,6 +1436,63 @@ async def status(current_user = Depends(get_current_user)):
             file_path="backend/app/api/billing.py",
             content=billing_api,
             description="Billing endpoints"
+        ))
+
+        # Org RBAC helper
+        org_rbac = '''from fastapi import Depends, HTTPException, status
+
+
+def require_org_roles(*roles: str):
+    async def dep(current_user = Depends(lambda: None)):
+        # Placeholder: assume owner's id is tenant owner for demo
+        user_role = getattr(current_user, 'role', 'member')
+        if user_role not in roles:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Insufficient org role')
+        return None
+    return dep
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/core/org_rbac.py",
+            content=org_rbac,
+            description="Organization RBAC helpers"
+        ))
+
+        # Invitations API
+        invitations_api = '''from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+import secrets
+
+from app.api.auth import get_current_user
+from app.db.database import get_db
+from app.models.invitation import Invitation
+from app.core.org_rbac import require_org_roles
+
+
+router = APIRouter()
+
+
+@router.post('/')
+async def create_invitation(email: str, role: str = 'member', current_user = Depends(get_current_user), db: Session = Depends(get_db)):
+    _ = await require_org_roles('owner','admin')(current_user)
+    code = secrets.token_urlsafe(12)
+    inv = Invitation(email=email, code=code, organization_id=1, role=role)  # demo org
+    db.add(inv); db.commit(); db.refresh(inv)
+    return {'id': inv.id, 'code': inv.code}
+
+
+@router.post('/accept')
+async def accept_invitation(code: str, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
+    inv = db.query(Invitation).filter(Invitation.code == code).first()
+    if not inv:
+        raise HTTPException(status_code=404, detail='Invalid invitation')
+    inv.accepted_at = __import__('datetime').datetime.utcnow()
+    db.add(inv); db.commit(); db.refresh(inv)
+    return {'status': 'accepted'}
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/api/invitations.py",
+            content=invitations_api,
+            description="Organization invitations endpoints"
         ))
 
         # Jobs service
