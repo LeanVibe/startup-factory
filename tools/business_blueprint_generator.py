@@ -663,7 +663,7 @@ async def login(email: str, password: str, totp_code: Optional[str] = None, db: 
     access_token = create_access_token(data={"sub": user.email})
     refresh_token = create_refresh_token(data={"sub": user.email, "jti": secrets.token_hex(8)})
     
-    # Optional cookie mode
+    # Optional cookie mode (when using cookies, CSRF token is required for state-changing requests)
     if os.getenv('AUTH_COOKIE') in ('1','true','yes'):
         resp = Response()
         resp.set_cookie(
@@ -674,7 +674,7 @@ async def login(email: str, password: str, totp_code: Optional[str] = None, db: 
             samesite="lax",
             max_age=60*60
         )
-        # CSRF token for forms
+        # CSRF token for forms (cookie mode)
         import secrets as _secrets
         resp.set_cookie("csrf_token", _secrets.token_hex(16), httponly=False, secure=False, samesite="lax")
         return resp
@@ -801,6 +801,7 @@ Generated CRUD operations with business logic
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
@@ -814,6 +815,7 @@ from app.core.tenancy import require_tenant
 from app.core.feature_flags import require_feature_flag
 
 router = APIRouter()
+security = HTTPBearer()
 
 
 @router.get("/", response_model=List[{entity_name}Response])
@@ -1032,14 +1034,27 @@ def create_app() -> FastAPI:
             response.headers.setdefault('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
         return response
 
-    # Placeholder for OpenAPI auth scheme (JWT bearer)
+    # Placeholder for OpenAPI auth schemes (JWT bearer + OAuth2 password flow) and global security
     def _custom_openapi():
         if app.openapi_schema:
             return app.openapi_schema
         schema = get_openapi(title=app.title, version="1.0.0", routes=app.routes)
-        schema.setdefault('components', {{}}).setdefault('securitySchemes', {{}}).setdefault(
-            'bearerAuth', {{"type": "http", "scheme": "bearer", "bearerFormat": "JWT"}}
-        )
+        comps = schema.setdefault('components', {{}}).setdefault('securitySchemes', {{}})
+        comps.setdefault('bearerAuth', {{"type": "http", "scheme": "bearer", "bearerFormat": "JWT"}})
+        comps.setdefault('oauth2', {{
+            "type": "oauth2",
+            "flows": {{
+                "password": {{
+                    "tokenUrl": "/api/auth/login",
+                    "scopes": {{}}
+                }}
+            }}
+        }})
+        # Global security requirement placeholder
+        try:
+            schema.setdefault('security', [{{"bearerAuth": []}}])
+        except Exception:
+            schema['security'] = [{{"bearerAuth": []}}]
         app.openapi_schema = schema
         return app.openapi_schema
     app.openapi = _custom_openapi
@@ -1355,6 +1370,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._hits = defaultdict(deque)
 
     async def dispatch(self, request, call_next):
+        # Allow simple header override for tests/admin (e.g., X-RateLimit-Override)
+        override = request.headers.get('X-RateLimit-Override')
+        if override:
+            try:
+                self.requests = max(1, int(override))
+            except Exception:
+                pass
         key = request.client.host if request.client else "global"
         now = time.time()
         dq = self._hits[key]
