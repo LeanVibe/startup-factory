@@ -193,6 +193,8 @@ class User(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     role = Column(String, default='member', nullable=False)
     subscription_status = Column(String, default='inactive', nullable=False)
+    stripe_customer_id = Column(String, nullable=True)
+    stripe_subscription_id = Column(String, nullable=True)
     failed_login_attempts = Column(Integer, default=0)
     locked_until = Column(DateTime, nullable=True)
     totp_secret = Column(String, nullable=True)
@@ -248,6 +250,7 @@ class Organization(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    plan = Column(String, default='free', nullable=False)
 '''
         return CodeArtifact(
             file_path="backend/app/models/organization.py",
@@ -1389,6 +1392,14 @@ async def checkout(price_id: str, request: Request, current_user = Depends(get_c
 
 @router.post('/webhook')
 async def webhook(request: Request):
+    payload = await request.body()
+    svc = BillingService()
+    return svc.handle_webhook(payload, request.headers.get('stripe-signature',''))
+
+
+@router.post('/webhook/stripe')
+async def stripe_webhook(request: Request):
+    # Placeholder route for Stripe CLI compatibility
     payload = await request.body()
     svc = BillingService()
     return svc.handle_webhook(payload, request.headers.get('stripe-signature',''))
