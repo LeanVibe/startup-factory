@@ -550,6 +550,7 @@ except Exception:
 
 router = APIRouter()
 security = HTTPBearer()
+_DENIED_REFRESH_TOKENS = set()
 
 
 @router.post("/register", response_model=UserResponse)
@@ -685,10 +686,32 @@ async def refresh(refresh_token: str):
     payload = decode_token(refresh_token)
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
-    # rotation placeholder; consider blacklist store integration
+    # denylist previous jti if present and rotate
+    old_jti = payload.get("jti")
+    if old_jti:
+        _DENIED_REFRESH_TOKENS.add(old_jti)
     new_access = create_access_token(data={"sub": payload.get("sub")})
     new_refresh = create_refresh_token(data={"sub": payload.get("sub"), "jti": secrets.token_hex(8)})
     return {"access_token": new_access, "refresh_token": new_refresh, "token_type": "bearer"}
+@router.post("/enable-totp")
+async def enable_totp(password: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if not verify_password(password, current_user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect password")
+    secret = secrets.token_hex(16)
+    current_user.totp_secret = secret
+    current_user.is_totp_enabled = True
+    db.add(current_user); db.commit(); db.refresh(current_user)
+    return {"enabled": True}
+
+
+@router.post("/disable-totp")
+async def disable_totp(password: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if not verify_password(password, current_user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect password")
+    current_user.totp_secret = None
+    current_user.is_totp_enabled = False
+    db.add(current_user); db.commit(); db.refresh(current_user)
+    return {"enabled": False}
 
 
 @router.post("/request-verify")
