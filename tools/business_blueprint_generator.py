@@ -208,6 +208,7 @@ class User(Base):
     subscription_status = Column(String, default='inactive', nullable=False)
     stripe_customer_id = Column(String, nullable=True)
     stripe_subscription_id = Column(String, nullable=True)
+    default_org_id = Column(Integer, nullable=True)
     failed_login_attempts = Column(Integer, default=0)
     locked_until = Column(DateTime, nullable=True)
     totp_secret = Column(String, nullable=True)
@@ -231,6 +232,7 @@ class UserResponse(BaseModel):
     is_verified: bool
     created_at: datetime
     role: str
+    default_org_id: int | None
     {additional_fields_str.replace(" = None", "").replace(" = False", "")}
     
     class Config:
@@ -1487,6 +1489,24 @@ def require_tenant(current_user = Depends(get_current_user)) -> int:
             description="Tenancy helper dependency"
         ))
 
+        # Org context helper
+        org_ctx = '''from fastapi import Depends, Header
+from app.api.auth import get_current_user
+
+
+def require_org_context(x_org_id: int | None = Header(default=None, alias='X-Org-Id'), current_user = Depends(get_current_user)) -> int:
+    """Resolve organization context. Prefer header, fallback to user's default org if present.
+    """
+    if x_org_id:
+        return int(x_org_id)
+    return int(getattr(current_user, 'default_org_id', 0) or 0)
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/core/org_context.py",
+            content=org_ctx,
+            description="Organization context resolver"
+        ))
+
         # Billing API
         billing_api = '''from fastapi import APIRouter, Depends, Request
 from app.api.auth import get_current_user
@@ -1588,12 +1608,23 @@ try:
     from app.models.membership import Membership  # minimal reference for membership lookup
 except Exception:
     Membership = None  # pragma: no cover
+from app.core.org_context import require_org_context
 
 
 def require_org_roles(*roles: str):
-    async def dep(current_user = Depends(lambda: None), db = Depends(get_db)):
-        # Minimal placeholder: signal membership-based checks are intended
-        _ = Membership, db  # reference for tests and future implementation
+    async def dep(current_user = Depends(lambda: None), current_org = Depends(require_org_context), db = Depends(get_db)):
+        # Minimal membership check: if Membership exists, ensure role allowed for org
+        if Membership and current_user:
+            try:
+                m = db.query(Membership).filter(
+                    Membership.user_id == getattr(current_user, 'id', 0),
+                    Membership.organization_id == current_org,
+                ).first()
+                if m and (m.role in roles):
+                    return None
+            except Exception:
+                pass
+        # Fallback to user role
         user_role = getattr(current_user, 'role', 'member')
         if user_role not in roles:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Insufficient org role')
@@ -1616,16 +1647,17 @@ from app.db.database import get_db
 from app.models.invitation import Invitation
 from app.models.membership import Membership
 from app.core.org_rbac import require_org_roles
+from app.core.org_context import require_org_context
 
 
 router = APIRouter()
 
 
 @router.post('/')
-async def create_invitation(email: str, role: str = 'member', current_user = Depends(get_current_user), db: Session = Depends(get_db)):
+async def create_invitation(email: str, role: str = 'member', current_user = Depends(get_current_user), current_org = Depends(require_org_context), db: Session = Depends(get_db)):
     _ = await require_org_roles('owner','admin')(current_user)
     code = secrets.token_urlsafe(12)
-    inv = Invitation(email=email, code=code, organization_id=1, role=role)  # demo org
+    inv = Invitation(email=email, code=code, organization_id=current_org, role=role)
     db.add(inv); db.commit(); db.refresh(inv)
     return {'id': inv.id, 'code': inv.code}
 
@@ -1647,9 +1679,9 @@ async def accept_invitation(code: str, current_user = Depends(get_current_user),
 
 
 @router.get('/pending')
-async def list_pending_invitations(current_user = Depends(get_current_user), db: Session = Depends(get_db)):
+async def list_pending_invitations(current_user = Depends(get_current_user), current_org = Depends(require_org_context), db: Session = Depends(get_db)):
     _ = await require_org_roles('owner','admin')(current_user)
-    items = db.query(Invitation).filter(Invitation.accepted_at == None).all()  # noqa: E711
+    items = db.query(Invitation).filter(Invitation.accepted_at == None).filter(Invitation.organization_id == current_org).all()  # noqa: E711
     return [{'id': i.id, 'email': i.email, 'role': i.role, 'code': i.code} for i in items]
 '''
         artifacts.append(CodeArtifact(
