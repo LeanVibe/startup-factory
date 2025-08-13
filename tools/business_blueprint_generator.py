@@ -805,6 +805,7 @@ from app.db.database import get_db
 from app.core.rbac import require_roles
 from app.core.billing import require_active_subscription, require_plan_features
 from app.core.tenancy import require_tenant
+from app.core.feature_flags import require_feature_flag
 
 router = APIRouter()
 
@@ -840,6 +841,7 @@ async def create_{entity_lower}(
 ):
     """Create new {entity_lower}"""
     _ = await require_roles("admin", "owner")(current_user)
+    await require_feature_flag('pro')(current_user)
     await require_active_subscription()(current_user)
     await require_plan_features('pro')(current_user)
     
@@ -981,6 +983,7 @@ from app.middleware.logging import StructuredLoggingMiddleware
 from app.core.metrics import init_metrics
 import logging
 from logging.handlers import RotatingFileHandler
+from fastapi.openapi.utils import get_openapi
 
 
 def create_app() -> FastAPI:
@@ -1013,6 +1016,26 @@ def create_app() -> FastAPI:
 
     app.include_router(api_router, prefix="/api")
     init_metrics(app)
+    
+    # Optional HSTS header (recommended in production behind TLS)
+    @app.middleware('http')
+    async def _hsts_middleware(request: Request, call_next):
+        response = await call_next(request)
+        if not settings.debug:
+            response.headers.setdefault('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
+        return response
+
+    # Placeholder for OpenAPI auth scheme (JWT bearer)
+    def _custom_openapi():
+        if app.openapi_schema:
+            return app.openapi_schema
+        schema = get_openapi(title=app.title, version="1.0.0", routes=app.routes)
+        schema.setdefault('components', {{}}).setdefault('securitySchemes', {{}}).setdefault(
+            'bearerAuth', {{"type": "http", "scheme": "bearer", "bearerFormat": "JWT"}}
+        )
+        app.openapi_schema = schema
+        return app.openapi_schema
+    app.openapi = _custom_openapi
     # simple DB readiness flag (no external IO)
     try:
         from app.db.database import SessionLocal
@@ -1101,6 +1124,34 @@ def create_access_token(data: dict, expires_minutes: int = ACCESS_TOKEN_EXPIRE_M
             file_path="backend/app/core/security.py",
             content=security_py,
             description="Password hashing and JWT helpers"
+        ))
+
+        # Feature flags module
+        feature_flags_py = '''from fastapi import Depends, HTTPException, status
+
+
+FEATURE_FLAGS = {
+    # Default flags; adjust in runtime config as needed
+    'pro': True,
+    'beta_dashboard': True,
+}
+
+
+def require_feature_flag(flag_name: str):
+    async def dep(current_user = Depends(lambda: None)):
+        enabled = FEATURE_FLAGS.get(flag_name, False)
+        if not enabled:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Feature '{flag_name}' is disabled",
+            )
+        return None
+    return dep
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/core/feature_flags.py",
+            content=feature_flags_py,
+            description="Feature flags and dependency guard",
         ))
 
         # RBAC helper module
@@ -1199,10 +1250,22 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
             content=middleware_security,
             description="Security headers, request size limit, and audit log middleware"
         ))
-        # Structured logging middleware
+        # Structured logging middleware with PII redaction
         logging_mw = '''import uuid
 import time
 from starlette.middleware.base import BaseHTTPMiddleware
+
+
+def redact_headers(headers: dict) -> dict:
+    """Redact sensitive values like Authorization and cookies from headers."""
+    safe: dict = {}
+    for key, value in headers.items():
+        lowered = key.lower()
+        if lowered in ('authorization', 'cookie', 'set-cookie'):
+            safe[key] = 'REDACTED'
+        else:
+            safe[key] = value
+    return safe
 
 
 class StructuredLoggingMiddleware(BaseHTTPMiddleware):
@@ -1212,7 +1275,9 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         duration_ms = int((time.time() - start) * 1000)
         response.headers['X-Request-Id'] = request_id
-        # Hook: log method, path, status, duration
+        # Example structured record; avoids logging raw PII
+        _redacted = redact_headers(dict(request.headers))  # contains 'Authorization': 'REDACTED'
+        _ = (request.method, request.url.path, response.status_code, duration_ms, _redacted)
         return response
 '''
         artifacts.append(CodeArtifact(
