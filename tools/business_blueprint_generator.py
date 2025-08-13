@@ -430,6 +430,12 @@ class {entity_name}Response(BaseModel):
         # Generate business workflow endpoints
         workflow_endpoints = await self._generate_workflow_endpoints(blueprint)
         artifacts.append(workflow_endpoints)
+        # Admin org management API
+        admin_api = await self._generate_admin_org_api(blueprint)
+        artifacts.append(admin_api)
+        # Admin org frontend component
+        admin_panel = await self._generate_admin_org_panel(blueprint)
+        artifacts.append(admin_panel)
         
         return artifacts
     
@@ -2060,6 +2066,61 @@ async def start_business_workflow(
             description="Business workflow endpoints",
             dependencies=["fastapi", "sqlalchemy"],
             is_business_logic=True
+        )
+
+    async def _generate_admin_org_api(self, blueprint: BusinessBlueprint) -> CodeArtifact:
+        code = '''from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
+from app.api.auth import get_current_user
+from app.core.org_rbac import require_org_roles
+from app.core.org_context import require_org_context
+from app.db.database import get_db
+from app.models.organization import Organization
+from app.models.membership import Membership
+from app.models.invitation import Invitation
+
+
+router = APIRouter()
+
+
+@router.get('/orgs')
+async def list_orgs(current_user = Depends(get_current_user), db: Session = Depends(get_db)):
+    return db.query(Organization).all()
+
+
+@router.get('/orgs/{org_id}/members')
+async def list_members(org_id: int, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
+    _ = await require_org_roles('owner','admin')(current_user)
+    return db.query(Membership).filter(Membership.organization_id == org_id).all()
+
+
+@router.get('/orgs/{org_id}/invites')
+async def list_invites(org_id: int, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
+    _ = await require_org_roles('owner','admin')(current_user)
+    return db.query(Invitation).filter(Invitation.organization_id == org_id).all()
+'''
+        return CodeArtifact(
+            file_path="backend/app/api/admin_orgs.py",
+            content=code,
+            description="Admin org management endpoints",
+            dependencies=["fastapi", "sqlalchemy"],
+            is_business_logic=False
+        )
+
+    async def _generate_admin_org_panel(self, blueprint: BusinessBlueprint) -> CodeArtifact:
+        ts = '''export class AdminOrgPanel extends HTMLElement {
+  connectedCallback() {
+    this.innerHTML = `<div>Admin Org Panel</div>`;
+    fetch('/api/admin/orgs').catch(()=>{});
+  }
+}
+customElements.define('admin-org-panel', AdminOrgPanel);
+'''
+        return CodeArtifact(
+            file_path="frontend/src/components/admin-org-panel.ts",
+            content=ts,
+            description="Admin org management panel"
         )
     
     async def _generate_ui_components(self, blueprint: BusinessBlueprint) -> List[CodeArtifact]:
