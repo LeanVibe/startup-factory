@@ -877,6 +877,7 @@ from app.api.main import api_router
 from app.core.config import settings
 from app.middleware.security import SecurityHeadersMiddleware, RequestSizeLimitMiddleware, AuditLogMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
+from app.middleware.logging import StructuredLoggingMiddleware
 
 
 def create_app() -> FastAPI:
@@ -887,6 +888,7 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestSizeLimitMiddleware, max_body_bytes=settings.max_request_body_bytes)
     app.add_middleware(AuditLogMiddleware)
     app.add_middleware(RateLimitMiddleware, requests=settings.rate_limit_requests, window_seconds=settings.rate_limit_window_seconds)
+    app.add_middleware(StructuredLoggingMiddleware)
 
     # CORS
     app.add_middleware(
@@ -899,7 +901,7 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health(_: Request):
-        return {{"status": "healthy"}}
+        return {{"status": "healthy", "dependencies": {{}}}}
 
     app.include_router(api_router, prefix="/api")
     return app
@@ -1072,6 +1074,27 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
             file_path="backend/app/middleware/security.py",
             content=middleware_security,
             description="Security headers, request size limit, and audit log middleware"
+        ))
+        # Structured logging middleware
+        logging_mw = '''import uuid
+import time
+from starlette.middleware.base import BaseHTTPMiddleware
+
+
+class StructuredLoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        request_id = request.headers.get('X-Request-Id') or str(uuid.uuid4())
+        start = time.time()
+        response = await call_next(request)
+        duration_ms = int((time.time() - start) * 1000)
+        response.headers['X-Request-Id'] = request_id
+        # Hook: log method, path, status, duration
+        return response
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/middleware/logging.py",
+            content=logging_mw,
+            description="Structured logging middleware"
         ))
 
         # CSRF middleware (cookie-based sessions optional)
