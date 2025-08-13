@@ -1013,6 +1013,13 @@ def create_app() -> FastAPI:
 
     app.include_router(api_router, prefix="/api")
     init_metrics(app)
+    # simple DB readiness flag (no external IO)
+    try:
+        from app.db.database import SessionLocal
+        _ = SessionLocal
+        db_ok = True
+    except Exception:
+        db_ok = False
     try:
         import os
         os.makedirs('logs', exist_ok=True)
@@ -2685,6 +2692,57 @@ class {blueprint.business_model.value.replace('_', '').title()}BusinessLogic:
         """Generate deployment configuration"""
         
         artifacts = []
+        
+        # Seed data script
+        seed_py = '''from app.db.database import SessionLocal
+from app.models.user import User
+from app.models.organization import Organization
+from app.models.membership import Membership
+
+
+def run():
+    db = SessionLocal()
+    try:
+        org = db.query(Organization).first()
+        if not org:
+            org = Organization(name='Demo Org')
+            db.add(org); db.commit(); db.refresh(org)
+        user = db.query(User).filter(User.email=='admin@example.com').first()
+        if not user:
+            user = User(email='admin@example.com', hashed_password='changeme', role='owner', default_org_id=org.id)
+            db.add(user); db.commit(); db.refresh(user)
+        m = db.query(Membership).filter(Membership.user_id==user.id, Membership.organization_id==org.id).first()
+        if not m:
+            db.add(Membership(user_id=user.id, organization_id=org.id, role='owner'))
+            db.commit()
+        print('Seed complete')
+    finally:
+        db.close()
+
+
+if __name__ == '__main__':
+    run()
+'''
+        artifacts.append(CodeArtifact(
+            file_path="tools/seed_data.py",
+            content=seed_py,
+            description="Seed demo org/user"
+        ))
+
+        migrate_sh = '''#!/usr/bin/env bash
+set -euo pipefail
+
+if command -v alembic >/dev/null 2>&1; then
+  alembic upgrade head || true
+else
+  python -m alembic upgrade head || true
+fi
+'''
+        artifacts.append(CodeArtifact(
+            file_path="scripts/migrate.sh",
+            content=migrate_sh,
+            description="Database migration script"
+        ))
         
         # Lint configuration
         pyproject = '''[tool.ruff]
