@@ -614,6 +614,10 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
 '''
         
         auth_code += '''    )
+    # Minimal password policy (length + digit + alpha)
+    password = user_data.password
+    if len(password) < 8 or not any(ch.isdigit() for ch in password) or not any(ch.isalpha() for ch in password):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password too weak")
     
     db.add(db_user)
     db.commit()
@@ -1005,6 +1009,12 @@ def create_app() -> FastAPI:
     app.add_middleware(RateLimitMiddleware, requests=settings.rate_limit_requests, window_seconds=settings.rate_limit_window_seconds)
     app.add_middleware(IdempotencyMiddleware)
     app.add_middleware(StructuredLoggingMiddleware)
+    # Error handler middleware to sanitize errors
+    try:
+        from app.middleware.errors import ErrorHandlerMiddleware
+        app.add_middleware(ErrorHandlerMiddleware)
+    except Exception:
+        pass
 
     # CORS
     app.add_middleware(
@@ -1250,6 +1260,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers.setdefault("X-XSS-Protection", "1; mode=block")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         response.headers.setdefault("Content-Security-Policy", "default-src 'self'")
+        # CSP nonce placeholder: in production, generate a per-response nonce and include it in CSP and script tags
         # Compliance: When operating in regulated industries (HIPAA/PCI/FERPA),
         # review and harden security headers and CSP appropriate to your environment.
         return response
@@ -1279,6 +1290,23 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
             file_path="backend/app/middleware/security.py",
             content=middleware_security,
             description="Security headers, request size limit, and audit log middleware"
+        ))
+        # Error handler middleware
+        errors_mw = '''from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
+
+
+class ErrorHandlerMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        try:
+            return await call_next(request)
+        except Exception as exc:  # pragma: no cover
+            return JSONResponse({"detail": "Internal server error"}, status_code=500)
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/middleware/errors.py",
+            content=errors_mw,
+            description="Basic error handler middleware"
         ))
         # Structured logging middleware with PII redaction
         logging_mw = '''import uuid
