@@ -736,6 +736,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
             "industry_vertical": blueprint.industry_vertical.value,
             "features": blueprint.solution_concept.key_features,
             "deployer": os.getenv("DEPLOY_TARGET", "tunnel"),
+            "head_sha": os.getenv("GITHUB_SHA", ""),
         }
         out = project_path / "project.json"
         with open(out, "w") as f:
