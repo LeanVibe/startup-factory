@@ -39,13 +39,13 @@ def apply_plan(project_dir: str, plan: Dict[str, Any], do_apply: bool = False) -
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text("")
                 written.append(target)
-        elif action_type == "conflict":
+        elif action_type in ("conflict", "update"):
             if do_apply:
                 conflict_path = target.with_suffix(target.suffix + ".new")
                 conflict_path.parent.mkdir(parents=True, exist_ok=True)
                 conflict_path.write_text("")
                 written.append(conflict_path)
-        # ignore updates for now (safe)
+        # ignore others
     return written
 
 
