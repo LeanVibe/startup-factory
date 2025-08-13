@@ -772,7 +772,8 @@ from app.models.{entity_lower} import {entity_name}, {entity_name}Create, {entit
 from app.api.auth import get_current_user
 from app.db.database import get_db
 from app.core.rbac import require_roles
-from app.core.billing import require_active_subscription
+from app.core.billing import require_active_subscription, require_plan_features
+from app.core.tenancy import require_tenant
 
 router = APIRouter()
 
@@ -782,12 +783,15 @@ async def get_{entity_lower}s(
     skip: int = 0,
     limit: int = 100,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_tenant: int = Depends(require_tenant)
 ):
     """Get list of {entity_lower}s for current user"""
     
     # Business logic: filter by user ownership or permissions
     query = db.query({entity_name})
+    if hasattr({entity_name}, 'tenant_id'):
+        query = query.filter({entity_name}.tenant_id == current_tenant)
     
     # Add business-specific filtering
     # TODO: Implement proper access control based on business model
@@ -800,18 +804,20 @@ async def get_{entity_lower}s(
 async def create_{entity_lower}(
     {entity_lower}_data: {entity_name}Create,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_tenant: int = Depends(require_tenant)
 ):
     """Create new {entity_lower}"""
     _ = await require_roles("admin", "owner")(current_user)
     await require_active_subscription()(current_user)
+    await require_plan_features('pro')(current_user)
     
     # Business-specific validation
     # TODO: Add business rules for {entity_lower} creation
     
     data = {entity_lower}_data.dict()
     if hasattr({entity_name}, 'tenant_id'):
-        data['tenant_id'] = current_user.id
+        data['tenant_id'] = current_tenant
     db_{entity_lower} = {entity_name}(**data)
     
     # Associate with current user if applicable
@@ -932,7 +938,8 @@ async def delete_{entity_lower}(
             ))
 
         # FastAPI app entrypoint with security middlewares
-        main_py = f'''from fastapi import FastAPI, Request
+        main_py = f'''# BEGIN GENERATED SECTION: MAIN APP (safe to merge)
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.main import api_router
 from app.core.config import settings
@@ -1447,11 +1454,37 @@ def require_active_subscription():
             raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail='Subscription required')
         return None
     return dep
+
+
+def require_plan_features(*features: str):
+    async def dep(current_user = Depends(lambda: None)):
+        if not features:
+            return None
+        status_val = getattr(current_user, 'subscription_status', 'inactive')
+        if status_val not in ('active', 'trialing'):
+            raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail='Plan does not include required features')
+        return None
+    return dep
 '''
         artifacts.append(CodeArtifact(
             file_path="backend/app/core/billing.py",
             content=billing_core,
             description="Billing dependencies"
+        ))
+
+        # Tenancy helper
+        tenancy_core = '''from fastapi import Depends
+from app.api.auth import get_current_user
+
+
+def require_tenant(current_user = Depends(get_current_user)) -> int:
+    """Determine current tenant. Minimal: use current user's id as tenant id stub."""
+    return getattr(current_user, 'id', 0)
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/core/tenancy.py",
+            content=tenancy_core,
+            description="Tenancy helper dependency"
         ))
 
         # Billing API
@@ -1515,6 +1548,7 @@ import time
 
 REQUEST_COUNT = Counter('app_requests_total', 'Total HTTP requests', ['endpoint'])
 REQUEST_LATENCY = Histogram('app_request_latency_seconds', 'Request latency', ['endpoint'])
+ERROR_COUNT = Counter('app_request_errors_total', 'Total HTTP error responses', ['endpoint','status_class'])
 router = APIRouter()
 
 
@@ -1527,6 +1561,9 @@ def init_metrics(app):
         try:
             REQUEST_COUNT.labels(endpoint=endpoint).inc()
             REQUEST_LATENCY.labels(endpoint=endpoint).observe(time.time() - start)
+            if response.status_code >= 400:
+                cls = '5xx' if response.status_code >= 500 else '4xx'
+                ERROR_COUNT.labels(endpoint=endpoint, status_class=cls).inc()
         except Exception:
             pass
         return response
@@ -1577,6 +1614,7 @@ import secrets
 from app.api.auth import get_current_user
 from app.db.database import get_db
 from app.models.invitation import Invitation
+from app.models.membership import Membership
 from app.core.org_rbac import require_org_roles
 
 
@@ -1598,6 +1636,12 @@ async def accept_invitation(code: str, current_user = Depends(get_current_user),
     if not inv:
         raise HTTPException(status_code=404, detail='Invalid invitation')
     inv.accepted_at = __import__('datetime').datetime.utcnow()
+    # Link user to organization via Membership
+    try:
+        m = Membership(user_id=current_user.id, organization_id=inv.organization_id, role=inv.role)
+        db.add(m)
+    except Exception:
+        pass
     db.add(inv); db.commit(); db.refresh(inv)
     return {'status': 'accepted'}
 
