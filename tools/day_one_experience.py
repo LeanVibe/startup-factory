@@ -79,18 +79,16 @@ class DayOneExperience:
         return None
     
     def _setup_docker(self):
-        """Setup Docker client with validation"""
+        """Setup Docker client with validation. Gracefully degrade when unavailable."""
         try:
             client = docker.from_env()
             # Test Docker connection
             client.ping()
             return client
         except Exception as e:
-            console.print(f"[red]❌ Docker not available: {e}[/red]")
-            console.print("Please install and start Docker:")
-            console.print("- macOS: https://docs.docker.com/desktop/mac/")
-            console.print("- Linux: https://docs.docker.com/engine/install/")
-            exit(1)
+            console.print(f"[yellow]⚠️  Docker not available: {e}[/yellow]")
+            console.print("Proceeding without Docker for non-deploy test paths.")
+            return None
     
     async def launch_day_one_experience(self) -> Dict[str, Any]:
         """Complete Day One Experience workflow"""
