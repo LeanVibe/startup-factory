@@ -877,6 +877,7 @@ from app.api.main import api_router
 from app.core.config import settings
 from app.middleware.security import SecurityHeadersMiddleware, RequestSizeLimitMiddleware, AuditLogMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
+from app.middleware.idempotency import IdempotencyMiddleware
 from app.middleware.logging import StructuredLoggingMiddleware
 
 
@@ -888,6 +889,7 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestSizeLimitMiddleware, max_body_bytes=settings.max_request_body_bytes)
     app.add_middleware(AuditLogMiddleware)
     app.add_middleware(RateLimitMiddleware, requests=settings.rate_limit_requests, window_seconds=settings.rate_limit_window_seconds)
+    app.add_middleware(IdempotencyMiddleware)
     app.add_middleware(StructuredLoggingMiddleware)
 
     # CORS
@@ -1121,6 +1123,29 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             file_path="backend/app/middleware/csrf.py",
             content=csrf_mw,
             description="Optional CSRF middleware for cookie-based sessions"
+        ))
+        # Idempotency middleware
+        idempotency_mw = '''from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
+import time
+
+
+_SEEN_KEYS = {}
+
+
+class IdempotencyMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        key = request.headers.get('Idempotency-Key')
+        if key and request.method in ('POST', 'PUT', 'PATCH'):
+            if key in _SEEN_KEYS and time.time() - _SEEN_KEYS[key] < 60:
+                return JSONResponse({"status": "duplicate"}, status_code=409)
+            _SEEN_KEYS[key] = time.time()
+        return await call_next(request)
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/app/middleware/idempotency.py",
+            content=idempotency_mw,
+            description="Simple idempotency middleware"
         ))
 
         middleware_rate = '''import time
