@@ -1589,6 +1589,14 @@ class BillingService:
         billing_core = '''from fastapi import Depends, HTTPException, status
 
 
+# Minimal plan→features mapping used by guards
+PLAN_FEATURES = {
+    'free': {'basic'},
+    'pro': {'basic', 'pro'},
+    'enterprise': {'basic', 'pro', 'enterprise'},
+}
+
+
 def require_active_subscription():
     async def dep(current_user = Depends(lambda: None)):
         if current_user is None:
@@ -1604,8 +1612,15 @@ def require_plan_features(*features: str):
     async def dep(current_user = Depends(lambda: None)):
         if not features:
             return None
+        # First, require an active or trialing subscription
         status_val = getattr(current_user, 'subscription_status', 'inactive')
         if status_val not in ('active', 'trialing'):
+            raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail='Subscription required')
+        # Then, check plan→features mapping
+        plan_name = getattr(current_user, 'plan', 'free') or 'free'
+        allowed = PLAN_FEATURES.get(plan_name, set())
+        missing = [f for f in features if f not in allowed]
+        if missing:
             raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail='Plan does not include required features')
         return None
     return dep
