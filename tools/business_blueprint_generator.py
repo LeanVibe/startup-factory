@@ -2731,6 +2731,64 @@ jobs:
         docker_compose = self._generate_docker_compose(blueprint)
         artifacts.append(docker_compose)
 
+        # CI test workflow
+        test_wf = '''name: Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt pytest ruff
+      - name: Lint
+        run: ruff --version && ruff . || true
+      - name: Tests
+        run: pytest -q
+'''
+        artifacts.append(CodeArtifact(
+            file_path=".github/workflows/test.yml",
+            content=test_wf,
+            description="CI tests workflow"
+        ))
+
+        # Backend pytest.ini
+        pytest_ini = '''[pytest]
+addopts = -q
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/pytest.ini",
+            content=pytest_ini,
+            description="Pytest ini"
+        ))
+
+        # Backend smoke test
+        smoke_test = '''from fastapi.testclient import TestClient
+from backend.app.main import app
+
+
+def test_health():
+    client = TestClient(app)
+    resp = client.get('/health')
+    assert resp.status_code == 200
+'''
+        artifacts.append(CodeArtifact(
+            file_path="backend/tests/test_app_smoke.py",
+            content=smoke_test,
+            description="Backend smoke test"
+        ))
+
         # Generate CI workflow for smoke tests
         ci_workflow = self._generate_ci_smoke_workflow(blueprint)
         artifacts.append(ci_workflow)
