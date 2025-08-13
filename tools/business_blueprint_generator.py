@@ -3009,6 +3009,16 @@ def print_status() -> dict:
     return {'status': 'ok'}
 
 
+def health() -> dict:
+    # Placeholder: would ping app health in a real project
+    return {'health': 'healthy'}
+
+
+def seed_basic_data() -> dict:
+    # Placeholder for seeding minimal data sets
+    return {'seeded': True}
+
+
 if __name__ == '__main__':
     print(print_status())
 '''
@@ -3325,6 +3335,35 @@ echo "✅ Smoke test completed"
         api_docs = self._generate_api_docs(blueprint)
         artifacts.append(api_docs)
         
+        # Developer ergonomics: .env.template and Makefile
+        env_template = '''# Environment template
+DATABASE_URL=postgresql://postgres:password@db:5432/app
+SECRET_KEY=change-me
+DEBUG=False
+'''
+        artifacts.append(CodeArtifact(
+            file_path=".env.template",
+            content=env_template,
+            description="Environment template"
+        ))
+
+        makefile = '''.PHONY: run test format
+
+run:
+	uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+
+test:
+	pytest -q
+
+format:
+	ruff check --fix . || true
+'''
+        artifacts.append(CodeArtifact(
+            file_path="Makefile",
+            content=makefile,
+            description="Developer convenience make targets"
+        ))
+
         return artifacts
     
     def _generate_readme(self, blueprint: BusinessBlueprint) -> CodeArtifact:
@@ -3359,6 +3398,13 @@ echo "✅ Smoke test completed"
 - Docker and Docker Compose
 - Node.js 18+ (for development)
 - Python 3.11+ (for development)
+
+### Getting Started
+
+```bash
+cp .env.template .env
+docker-compose up -d
+```
 
 ### Development Setup
 
