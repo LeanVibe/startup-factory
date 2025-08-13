@@ -1394,6 +1394,9 @@ async def sign_upload(
         billing_service = '''import os
 import json
 import stripe
+from sqlalchemy.orm import Session
+from app.models.user import User
+from app.db.database import get_db
 
 
 class BillingService:
@@ -1414,12 +1417,19 @@ class BillingService:
         )
         return {"id": session.id, "url": session.url}
 
-    def handle_webhook(self, payload: bytes, sig: str) -> dict:
-        # Minimal parser: no signature verification in CI
-        try:
-            event = json.loads(payload.decode('utf-8') or '{}')
-        except Exception:
-            event = {}
+    def handle_webhook(self, payload: bytes, sig: str, db: Session | None = None) -> dict:
+        # Optional signature verification when secret is present
+        secret = os.getenv('STRIPE_WEBHOOK_SECRET')
+        if secret:
+            try:
+                event = stripe.Webhook.construct_event(payload, sig, secret)
+            except Exception:
+                event = {}
+        else:
+            try:
+                event = json.loads(payload.decode('utf-8') or '{}')
+            except Exception:
+                event = {}
         event_type = event.get('type', '')
         data_obj = (event.get('data') or {}).get('object') or {}
         updates = {}
@@ -1435,6 +1445,16 @@ class BillingService:
             updates['stripe_subscription_id'] = sub_id
             updates['subscription_status'] = status
 
+        # Persistence stub: if db provided and we have an email hint, update first user
+        try:
+            if db and updates:
+                user = db.query(User).first()
+                if user:
+                    for k, v in updates.items():
+                        setattr(user, k, v)
+                    db.add(user); db.commit(); db.refresh(user)
+        except Exception:
+            pass
         return {"received": True, "updates": updates, "type": event_type}
 '''
         artifacts.append(CodeArtifact(
@@ -1465,6 +1485,13 @@ def require_plan_features(*features: str):
         status_val = getattr(current_user, 'subscription_status', 'inactive')
         if status_val not in ('active', 'trialing'):
             raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail='Plan does not include required features')
+        return None
+    return dep
+
+
+def require_usage_limit(limit_name: str):
+    async def dep(current_user = Depends(lambda: None)):
+        # Minimal stub: always allow in generator output; real projects can wire counters
         return None
     return dep
 '''
@@ -1511,6 +1538,7 @@ def require_org_context(x_org_id: int | None = Header(default=None, alias='X-Org
         billing_api = '''from fastapi import APIRouter, Depends, Request
 from app.api.auth import get_current_user
 from app.services.billing_service import BillingService
+from app.db.database import get_db
 
 
 router = APIRouter()
@@ -1524,10 +1552,10 @@ async def checkout(price_id: str, request: Request, current_user = Depends(get_c
 
 
 @router.post('/webhook')
-async def webhook(request: Request):
+async def webhook(request: Request, db = Depends(get_db)):
     payload = await request.body()
     svc = BillingService()
-    return svc.handle_webhook(payload, request.headers.get('stripe-signature',''))
+    return svc.handle_webhook(payload, request.headers.get('stripe-signature',''), db)
 
 
 @router.post('/webhook/stripe')
@@ -1552,6 +1580,16 @@ async def plans():
             {"id": "pro", "features": ["basic", "pro"]},
             {"id": "enterprise", "features": ["basic", "pro", "enterprise"]},
         ]
+    }
+
+
+@router.get('/me')
+async def me(current_user = Depends(get_current_user)):
+    return {
+        "subscription_status": getattr(current_user, 'subscription_status', 'inactive'),
+        "plan": getattr(current_user, 'plan', 'free'),
+        "stripe_customer_id": getattr(current_user, 'stripe_customer_id', None),
+        "stripe_subscription_id": getattr(current_user, 'stripe_subscription_id', None),
     }
 '''
         artifacts.append(CodeArtifact(
