@@ -17,25 +17,33 @@ Context (current state)
 - Deployers in `tools/deployers/` (base, fly, render). DEPLOY_TARGET switching.
 - Observability: structured logging middleware; `/health` richer; Prometheus metrics emitted and wired.
 - CI: unit workflow runs pytest; `aiohttp` in requirements.
-- Multi-tenant/billing phase 1: `Organization`, `tenant_id` on entities, `subscription_status` (+ stripe ids) on `User`, billing endpoints; org invitations and org RBAC helper added.
-- Unit tests: green including new tests for invitations and metrics wiring.
+- Multi-tenant/billing phase 1+2: `Organization`, `tenant_id` on entities, `subscription_status` (+ stripe ids) on `User`, billing endpoints; plan→features mapping; trials recognized.
+- Unit tests: green including new tests for invitations, metrics wiring, flags/logging, billing v2, apply-plan CLI, day-one metadata, observability v2.
+
+Recent changes you should know
+- Feature flags: `backend/app/core/feature_flags.py` and usage in entity create
+- Logging: PII redaction for Authorization/cookies; HSTS + OpenAPI bearer placeholder in `main.py`
+- Org RBAC: invitations/admin routers included; tenancy dependency on update
+- Billing v2: PLAN_FEATURES mapping; `trialing` accepted; webhook events handled in stubs
+- Apply-plan CLI: `tools/apply_plan.py` with dry-run and safe apply; compatibility for two call styles
+- Observability v2: metrics wiring and rotation hook tests
+- Deployment slice: Day One writes `production_projects/<id>/project.json`; deployer selection validated; Docker fallback for tests
 
 Your next four epics (from docs/PLAN.md)
-1) Org-level RBAC & invitations (production-ready)
-   - Finalize `require_org_roles` to check membership (add minimal `membership.py`), tenancy dependency for filters/tenant_id on create.
-   - Invitations API: create/accept/pending.
-   - TDD: add small tests that assert emitted files and presence of tenancy/org-role guards.
-2) Billing v2 (webhooks, trials, feature flags)
-   - Parse minimal Stripe events to update `subscription_status`, `stripe_customer_id`, `stripe_subscription_id` (no external calls in CI).
-   - `/plans` endpoint and plan→feature flags; guards recognize `trialing` and `active`.
-   - TDD: tests that generator emits handler code and plans endpoint content.
-3) Regeneration apply-plan CLI
-   - Create `tools/apply_plan.py` to read `plan.json` and apply safe creates; `--dry-run` vs `--apply`.
-   - Add non-breaking merge markers in key generated files to prepare future semantic merges.
-   - TDD: minimal unit to import CLI and parse a sample plan.
-4) Observability v2 & DX
-   - Optional: labeled error counters; basic log rotation (if trivial); keep tests fast.
-   - CI stays green. Add lint job later if bandwidth.
+1) Auth/session & security v2 (JWT/OpenAPI/cookie‑CSRF)
+   - Add OAuth2 password flow placeholder and global security requirement to `backend/app/main.py` (commented/conditional).
+   - Ensure CSRF path is clear for cookie mode; add minimal password policy checks; consistent `HTTPBearer` imports.
+   - TDD: tests assert OpenAPI additions, cookie mode notes, and consistent imports.
+2) Compliance toggles (industry‑aware scaffolds)
+   - Add HIPAA/PCI/FERPA toggles in `core/config.py`; expand redaction headers when toggles set.
+   - Emit compliance comments in security middleware/services based on industry.
+   - TDD: tests assert flags/comments exist for healthcare/fintech/education.
+3) Generated app quality gates (smoke + security checks)
+   - Emit tests for security headers, `/metrics`, and redaction; add `tools/manage.py` helper (no external IO).
+   - TDD: tests assert artifacts emitted.
+4) Deployment polish (optional Railway, tunnels ergonomics)
+   - Add RailwayDeployer stub and wire selection; improve tunnel detection messages.
+   - TDD: deployer selection includes railway; metadata persists unchanged.
 
 Constraints
 - Only short-lived commands; no long-running servers in CI.
@@ -55,6 +63,15 @@ Definition of done per epic
 Validation commands
 - `python -m pytest tests/unit -q`
 - Inspect generated artifacts by scanning `BusinessLogicGenerator` outputs in tests.
+
+Kickoff checklist for you
+- Read `docs/PLAN.md` (updated) and this prompt.
+- Run unit tests. Ensure 100% pass.
+- Start Epic 2 (Auth/security v2):
+  - Add failing unit tests under `tests/unit/` for OpenAPI oauth2+global security and cookie mode notes.
+  - Implement minimal generator edits to satisfy tests.
+  - Keep changes comment/conditional where appropriate to avoid runtime breakage.
+- Proceed to Epic 3 and 4 similarly, one vertical slice at a time.
 
 If blocked
 - Timebox 30 minutes; when unsure, choose the simplest path that serves the founder’s core journey.
