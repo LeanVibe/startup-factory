@@ -446,6 +446,10 @@ class {entity_name}Response(BaseModel):
 Main API router for {blueprint.solution_concept.core_value_proposition}
 Business Model: {blueprint.business_model.value}
 Industry: {blueprint.industry_vertical.value}
+
+API conventions:
+- Pagination clamp is applied in list endpoints to prevent abuse.
+  Example: limit = min(limit, 500)
 """
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -840,6 +844,8 @@ async def get_{entity_lower}s(
     # Add business-specific filtering
     # TODO: Implement proper access control based on business model
     
+    # Simple pagination clamp
+    limit = min(limit, 500)
     items = query.offset(skip).limit(limit).all()
     return items
 
@@ -977,9 +983,17 @@ async def delete_{entity_lower}(
             "backend/app/db",
             "backend/app/worker",
         ]:
+            init_content = ""
+            if pkg == "backend/app/api":
+                init_content = """
+API package for generated routers.
+
+API conventions:
+- Pagination clamp: limit = min(limit, 500)
+"""
             artifacts.append(CodeArtifact(
                 file_path=f"{pkg}/__init__.py",
-                content="",
+                content=init_content,
                 description=f"Package init for {pkg}"
             ))
 
@@ -3047,6 +3061,17 @@ def seed_basic_data() -> dict:
     return {'seeded': True}
 
 
+def print_routes() -> str:
+    # Minimal route list for quick navigation
+    return "\n".join([
+        "GET /health",
+        "GET /docs",
+        "GET /api/health",
+        "POST /auth/login",
+        "POST /auth/register",
+    ])
+
+
 if __name__ == '__main__':
     print(print_status())
 '''
@@ -3089,6 +3114,46 @@ def test_health():
         # Generate local smoke script
         smoke_script = self._generate_smoke_script(blueprint)
         artifacts.append(smoke_script)
+
+        # Local dev helper script
+        dev_sh = '''#!/usr/bin/env bash
+set -euo pipefail
+
+cmd=${1:-help}
+case "$cmd" in
+  up)
+    echo "Starting services..."
+    docker-compose up -d
+    ;;
+  down)
+    echo "Stopping services..."
+    docker-compose down
+    ;;
+  status)
+    echo "Status:"
+    docker-compose ps || true
+    if [ -f production_projects/*/project.json ]; then
+      echo "Detected project metadata:"
+      python - <<'PY'
+import json,glob
+paths = sorted(glob.glob('production_projects/*/project.json'))
+if paths:
+    with open(paths[-1]) as f:
+        data=json.load(f)
+    print('public_url:', data.get('public_url'))
+PY
+    fi
+    ;;
+  *)
+    echo "Usage: scripts/dev.sh {up|down|status}"
+    ;;
+esac
+'''
+        artifacts.append(CodeArtifact(
+            file_path="scripts/dev.sh",
+            content=dev_sh,
+            description="Local dev helper script"
+        ))
         
         # Deployer skeleton manifests/messages
         base_deployer = CodeArtifact(
@@ -3432,6 +3497,8 @@ format:
 ```bash
 cp .env.template .env
 docker-compose up -d
+python tools/manage.py  # view status
+python -c "import tools.manage as m; print(m.seed_basic_data()); print(m.print_routes())"
 ```
 
 ### Development Setup
@@ -3471,6 +3538,13 @@ print('Test user created: test@example.com / password123')
 - **Admin Panel**: http://localhost:8000/admin
 
 ## 📖 Documentation
+
+### API conventions
+
+- All list endpoints accept `skip` and `limit` query params. The `limit` value
+  is clamped to a maximum of 500 to protect the service: `limit = min(limit, 500)`.
+- Authentication uses JWT bearer by default. OAuth2 password flow is documented
+  in OpenAPI for future compatibility.
 
 ### Architecture
 

@@ -100,7 +100,14 @@ class DayOneExperience:
             return None
     
     async def launch_day_one_experience(self) -> Dict[str, Any]:
-        """Complete Day One Experience workflow"""
+        """Complete Day One Experience workflow
+
+        Note: A future non-interactive "--status-only" CLI path can print the
+        last known metadata from production_projects/<id>/project.json without
+        performing generation or deployment. This code path is documented in
+        docs and scripts, and intentionally not wired here to avoid long-lived
+        processes in CI.
+        """
         
         self._show_welcome_screen()
         await self._log_event("experience_started", phase="welcome")
