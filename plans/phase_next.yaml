@@ -1,0 +1,44 @@
+version: 1
+plan: phase_next
+
+tasks:
+  - name: orchestration-docs-and-sample
+    tests:
+      - pytest -q tests/unit/test_agent_runner_cli.py::test_agent_runner_cli_list_and_next
+    edits:
+      - add: docs/ORCHESTRATION.md
+      - add: plans/phase_next.yaml
+    verify:
+      - pytest -q tests/unit/test_agent_runner_cli.py
+    commit: "docs(orchestration): add guide and example plan"
+
+  - name: generator-modularization-slice
+    tests:
+      - pytest -q tests/unit/test_api_surface_hardening.py::test_max_limit_clamp_and_readme_api_conventions
+    edits:
+      - add: tools/gen/api_endpoints.py
+      - update: tools/business_blueprint_generator.py
+    verify:
+      - pytest -q tests/unit/test_api_surface_hardening.py
+    commit: "refactor(gen): extract api endpoints into module"
+
+  - name: demo-and-smoke-enhance
+    tests:
+      - pytest -q tests/unit/test_deployment_dx_v2.py::test_scripts_and_status_only_mentions
+    edits:
+      - update: scripts/smoke.sh
+      - add: scripts/demo.sh
+      - update: README.md
+    verify:
+      - pytest -q tests/unit/test_deployment_dx_v2.py
+    commit: "feat(demo): enhance smoke and add demo script"
+
+  - name: ci-reliability-profile
+    tests:
+      - pytest -q tests/unit/test_openapi_polish.py::test_openapi_enrichment_and_client_stub
+    edits:
+      - add: pytest.ini
+      - update: docs/ORCHESTRATION.md
+    verify:
+      - pytest -q tests/unit
+    commit: "chore(ci): pytest discovery filters and docs"

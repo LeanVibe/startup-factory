@@ -25,6 +25,7 @@ except Exception:  # pragma: no cover
     yaml = None  # type: ignore
 
 STATE_ROOT = Path('.agent_state')
+LOG_ROOT = Path('.agent_state/logs')
 
 
 def summarize_plan_for_dry_run(plan: Dict[str, Any]) -> List[str]:
@@ -74,7 +75,13 @@ def _load_plan_from_yaml(path: Path) -> Dict[str, Any]:  # pragma: no cover (CLI
     if yaml is None:
         raise RuntimeError("PyYAML not available; cannot load plan from file")
     with path.open() as f:
-        return yaml.safe_load(f)
+        data = yaml.safe_load(f)
+    # Minimal schema validation
+    if not isinstance(data, dict) or 'version' not in data or 'plan' not in data or 'tasks' not in data:
+        raise SystemExit('Invalid plan schema: require version, plan, tasks')
+    if not isinstance(data['tasks'], list):
+        raise SystemExit('Invalid plan schema: tasks must be a list')
+    return data
 
 
 def _print(lines: List[str]) -> None:  # separated for testability
@@ -129,16 +136,31 @@ def run_cli(argv: Optional[List[str]] = None) -> int:  # pragma: no cover
     for task in tasks:
         name = task.get('name', 'unnamed_task')
         print(f"Executing task: {name}")
+        # per-task log
+        LOG_ROOT.mkdir(parents=True, exist_ok=True)
+        logf = (LOG_ROOT / f"{plan_name}__{name}.log").open('a')
         for phase in ('tests', 'edits', 'verify'):
             cmds = task.get(phase, [])
             if cmds:
                 print(f"# {phase}")
                 for cmd in cmds:
                     print(cmd)
+                    try:
+                        logf.write(f"{phase}: {cmd}\n")
+                    except Exception:
+                        pass
         if task.get('commit'):
             print(f"# commit\n{task['commit']}")
+            try:
+                logf.write(f"commit: {task['commit']}\n")
+            except Exception:
+                pass
         _mark_task_done(plan_name, name)
         print(f"Marked done: {name}")
+        try:
+            logf.close()
+        except Exception:
+            pass
 
     return 0
 

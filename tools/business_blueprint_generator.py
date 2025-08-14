@@ -3422,6 +3422,19 @@ curl -fsS http://localhost:8000/api/health || true
 echo "🔎 Checking API docs"
 curl -fsS http://localhost:8000/docs >/dev/null || true
 
+echo "🔎 Deployment metadata (if available)"
+python - <<'PY'
+import json,glob
+paths = sorted(glob.glob('production_projects/*/project.json'))
+if paths:
+    with open(paths[-1]) as f:
+        data=json.load(f)
+    print('public_url:', data.get('public_url'))
+    print('deployer:', data.get('deployer'))
+else:
+    print('No project metadata found')
+PY
+
 echo "✅ Smoke test completed"
 '''
         return CodeArtifact(
