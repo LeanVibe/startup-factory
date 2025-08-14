@@ -34,6 +34,7 @@ except ImportError as e:
 
 # Import our new founder-focused systems
 from .founder_interview_system import FounderInterviewAgent, BusinessBlueprint
+from .retry_utils import retry_async
 from .business_blueprint_generator import BusinessLogicGenerator
 
 console = Console()
@@ -47,13 +48,12 @@ class StreamlinedOrchestrator:
         self.output_dir = Path("production_projects")
         self.output_dir.mkdir(exist_ok=True)
     
-    def _setup_anthropic(self) -> anthropic.Anthropic:
-        """Setup Anthropic client"""
+    def _setup_anthropic(self) -> Optional[anthropic.Anthropic]:
+        """Setup Anthropic client (graceful in tests)"""
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
-            console.print("[red]Error: ANTHROPIC_API_KEY environment variable not set[/red]")
-            console.print("Get your key at: https://console.anthropic.com/")
-            exit(1)
+            console.print("[yellow]Anthropic API key not set; running in demo mode[/yellow]")
+            return None
         return anthropic.Anthropic(api_key=api_key)
     
     async def run_complete_workflow(self) -> str:
@@ -90,7 +90,11 @@ class StreamlinedOrchestrator:
             
             # Phase 4: Generate Deployment
             console.print("\n[bold cyan]Phase 4: Deployment Setup[/bold cyan]")
-            await self._setup_deployment(project_path, blueprint)
+            # Use retry helper for short-lived deployment setup steps
+            async def _setup():
+                await self._setup_deployment(project_path, blueprint)
+                return True
+            await retry_async(_setup, max_attempts=3, base_delay_ms=50, max_delay_ms=500)
             
             # Success!
             console.print(f"\n[bold green]🎉 SUCCESS![/bold green]")
