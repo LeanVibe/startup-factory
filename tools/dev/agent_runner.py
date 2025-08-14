@@ -98,6 +98,8 @@ def run_cli(argv: Optional[List[str]] = None) -> int:  # pragma: no cover
     parser.add_argument('--next', dest='next_task', action='store_true', help='Run the next not-done task')
     parser.add_argument('--list', dest='list_tasks', action='store_true', help='List tasks and exit')
     parser.add_argument('--resume', dest='next_task_alias', action='store_true', help='Alias for --next')
+    parser.add_argument('--instructions', type=str, help='Path to an instructions file to log alongside execution')
+    parser.add_argument('--subagent', type=str, choices=['tester','editor','verifier'], help='Delegate execution hint (logged only)')
     args = parser.parse_args(argv)
 
     plan: Dict[str, Any]
@@ -139,6 +141,16 @@ def run_cli(argv: Optional[List[str]] = None) -> int:  # pragma: no cover
         # per-task log
         LOG_ROOT.mkdir(parents=True, exist_ok=True)
         logf = (LOG_ROOT / f"{plan_name}__{name}.log").open('a')
+        # log instructions/subagent hints once at top
+        if args.instructions:
+            try:
+                content = Path(args.instructions).read_text()
+                logf.write(f"instructions: {content}\n")
+            except Exception:
+                logf.write("instructions: <unreadable>\n")
+        if args.subagent:
+            logf.write(f"subagent: {args.subagent}\n")
+
         for phase in ('tests', 'edits', 'verify'):
             cmds = task.get(phase, [])
             if cmds:
