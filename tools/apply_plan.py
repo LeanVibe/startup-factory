@@ -19,6 +19,7 @@ def apply_plan(
     apply: bool = False,
     do_apply: bool = False,
     project_root: Union[str, Path, None] = None,
+    only: Union[set, None] = None,
 ):
     """Apply a generation plan.
 
@@ -57,8 +58,11 @@ def apply_plan(
         return summary
     # Only perform safe creates; write files that don't exist yet
     written_paths = []
+    allowed = {"create", "update", "conflict"} if only is None else set(only)
     for action in detected_plan.get("actions", []):
         if action.get("type") == "create":
+            if "create" not in allowed:
+                continue
             path = root / action.get("path", "")
             content = action.get("content", "")
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -66,6 +70,8 @@ def apply_plan(
                 path.write_text(content)
             written_paths.append(str(path))
         elif action.get("type") == "conflict":
+            if "conflict" not in allowed:
+                continue
             # leave a .new file alongside the original path
             base = root / action.get("path", "")
             new_path = base.with_suffix(base.suffix + ".new")
@@ -73,6 +79,8 @@ def apply_plan(
             new_path.write_text(action.get("new_content", ""))
             written_paths.append(str(new_path))
         elif action.get("type") == "update":
+            if "update" not in allowed:
+                continue
             # do not overwrite; write side-by-side .new for manual merge
             base = root / action.get("path", "")
             new_path = base.with_suffix(base.suffix + ".new")
