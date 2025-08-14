@@ -16,7 +16,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, UTC
 from enum import Enum
-from typing import Dict, List, Optional, Any, Callable
+from typing import Dict, List, Optional, Any, Callable, Tuple
 
 import aiohttp
 try:
@@ -32,6 +32,30 @@ except Exception:  # pragma: no cover - fallback for non-package import context
     from core_types import Task, TaskResult, TaskType, ProviderError
 
 logger = logging.getLogger(__name__)
+class ProviderErrorCategory(str, Enum):
+    TIMEOUT = "timeout"
+    RATE_LIMIT = "rate_limit"
+    AUTH = "auth"
+    OOM = "oom"
+    NETWORK = "network"
+    OTHER = "other"
+
+
+def classify_provider_error(error: Exception) -> Tuple[ProviderErrorCategory, bool]:
+    """Map exception to (category, retryable)."""
+    name = type(error).__name__.lower()
+    msg = str(error).lower()
+    if "timeout" in name or "timeout" in msg:
+        return (ProviderErrorCategory.TIMEOUT, True)
+    if "rate limit" in msg or "too many requests" in msg or getattr(error, 'status', 0) == 429:
+        return (ProviderErrorCategory.RATE_LIMIT, True)
+    if "unauthorized" in msg or "forbidden" in msg or getattr(error, 'status', 0) in (401, 403):
+        return (ProviderErrorCategory.AUTH, False)
+    if "out of memory" in msg or "oom" in msg:
+        return (ProviderErrorCategory.OOM, True)
+    if "dns" in msg or "connection" in msg or "network" in msg:
+        return (ProviderErrorCategory.NETWORK, True)
+    return (ProviderErrorCategory.OTHER, False)
 
 # Configure more detailed logging for reliability monitoring
 logging.basicConfig(
