@@ -3115,6 +3115,21 @@ def test_health():
         smoke_script = self._generate_smoke_script(blueprint)
         artifacts.append(smoke_script)
 
+        # API client generation stub (no network calls)
+        gen_client = '''#!/usr/bin/env bash
+set -euo pipefail
+
+echo "This is a stub for generating API clients from OpenAPI."
+echo "Export your OpenAPI JSON (e.g., curl http://localhost:8000/openapi.json)"
+echo "Then run your preferred generator (e.g., openapi-generator) locally."
+echo "# gen_client"
+'''
+        artifacts.append(CodeArtifact(
+            file_path="scripts/gen_client.sh",
+            content=gen_client,
+            description="Client generation stub"
+        ))
+
         # Local dev helper script
         dev_sh = '''#!/usr/bin/env bash
 set -euo pipefail

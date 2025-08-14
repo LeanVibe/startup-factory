@@ -848,6 +848,25 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
         pass
 
 
+def read_latest_project_metadata(base_dir: Path | str = "production_projects") -> Dict[str, Any] | None:
+    """Return latest project.json metadata if present (no external IO).
+
+    This supports a non-interactive status-only path in CLI tools.
+    """
+    base = Path(base_dir)
+    if not base.exists():
+        return None
+    project_files = sorted(base.glob("*/project.json"))
+    if not project_files:
+        return None
+    latest = project_files[-1]
+    try:
+        with open(latest, "r") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
 async def main():
     """Main entry point for Day One Experience"""
     

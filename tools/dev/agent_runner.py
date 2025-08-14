@@ -89,6 +89,8 @@ def run_cli(argv: Optional[List[str]] = None) -> int:  # pragma: no cover
     parser.add_argument('--execute', action='store_true', help='Execute steps and write state markers')
     parser.add_argument('--only', type=str, help='Run single task by name')
     parser.add_argument('--next', dest='next_task', action='store_true', help='Run the next not-done task')
+    parser.add_argument('--list', dest='list_tasks', action='store_true', help='List tasks and exit')
+    parser.add_argument('--resume', dest='next_task_alias', action='store_true', help='Alias for --next')
     args = parser.parse_args(argv)
 
     plan: Dict[str, Any]
@@ -107,7 +109,12 @@ def run_cli(argv: Optional[List[str]] = None) -> int:  # pragma: no cover
             print(f"No task named {args.only} in plan {plan_name}")
             return 1
 
-    if args.next_task:
+    if args.list_tasks:
+        for t in tasks:
+            print(t.get('name', 'unnamed_task'))
+        return 0
+
+    if args.next_task or args.next_task_alias:
         tasks = [t for t in tasks if not _is_task_done(plan_name, t.get('name', ''))]
         if not tasks:
             print('All tasks already completed.')

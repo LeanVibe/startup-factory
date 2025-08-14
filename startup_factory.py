@@ -320,6 +320,18 @@ async def main():
         elif arg == "--status":
             startup_factory.show_system_status()
             return
+        elif arg == "--status-only":
+            # Print last known deployment metadata (no long-lived process)
+            try:
+                from tools.day_one_experience import read_latest_project_metadata
+                meta = read_latest_project_metadata()
+                if not meta:
+                    console.print("No deployment metadata found.")
+                else:
+                    console.print({k: meta.get(k) for k in ("public_url", "deployer", "head_sha")})
+            except Exception as e:
+                console.print(f"[yellow]Status-only unavailable: {e}[/yellow]\nUse scripts/dev.sh status to inspect local status.")
+            return
         elif arg == "--interview-only":
             await startup_factory.run_interview_only()
             return
@@ -328,6 +340,7 @@ async def main():
             console.print("  python startup_factory.py              # Interactive menu")
             console.print("  python startup_factory.py --demo       # Show demonstration")
             console.print("  python startup_factory.py --status     # System status")
+            console.print("  python startup_factory.py --status-only # Print last known URL")
             console.print("  python startup_factory.py --interview  # Interview only")
             console.print("  python startup_factory.py --help       # Show this help")
             return
