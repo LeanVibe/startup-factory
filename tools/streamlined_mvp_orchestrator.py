@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
 Streamlined MVP Orchestrator
-A simplified, founder-focused orchestrator that replaces complex infrastructure 
+A simplified, founder-focused orchestrator that replaces complex infrastructure
 with intelligent conversation-driven startup generation.
 
 TRANSFORMATION: From 1296 lines of complex orchestration to <200 lines of focused workflow.
 
 CORE WORKFLOW:
 1. Founder Interview (AI Architect Agent)
-2. Business Blueprint Generation  
+2. Business Blueprint Generation
 3. Smart Code Generation
 4. Live MVP Deployment
 
@@ -16,11 +16,9 @@ This eliminates 70% of the original complexity while providing superior founder 
 """
 
 import asyncio
-import json
 import os
-from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Optional
 
 try:
     import anthropic
@@ -42,96 +40,124 @@ console = Console()
 
 class StreamlinedOrchestrator:
     """Simplified orchestrator focused on founder-to-MVP workflow"""
-    
+
     def __init__(self):
         self.anthropic_client = self._setup_anthropic()
         self.output_dir = Path("production_projects")
         self.output_dir.mkdir(exist_ok=True)
-    
+
     def _setup_anthropic(self) -> Optional[anthropic.Anthropic]:
         """Setup Anthropic client (graceful in tests)"""
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
-            console.print("[yellow]Anthropic API key not set; running in demo mode[/yellow]")
-            return None
+            # Preserve original behavior expected by some tests: exit if required key missing
+            console.print(
+                "[red]Error: ANTHROPIC_API_KEY environment variable not set[/red]"
+            )
+            console.print("Get your key at: https://console.anthropic.com/")
+            raise SystemExit(1)
         return anthropic.Anthropic(api_key=api_key)
-    
+
     async def run_complete_workflow(self) -> str:
         """Complete workflow: Interview → Blueprint → Generate → Deploy"""
-        
-        console.print(Panel(
-            "[bold blue]🚀 Startup Factory - Streamlined MVP Generation[/bold blue]\n\n"
-            "Transform your idea into a live MVP in minutes:\n"
-            "1. AI Architect Interview (15 minutes)\n"
-            "2. Business Blueprint Generation (2 minutes)\n" 
-            "3. Smart Code Generation (5 minutes)\n"
-            "4. Live Deployment (3 minutes)\n\n"
-            "[green]Total time: ~25 minutes from idea to live MVP[/green]",
-            title="MVP Factory"
-        ))
-        
+
+        console.print(
+            Panel(
+                "[bold blue]🚀 Startup Factory - Streamlined MVP Generation[/bold blue]\n\n"
+                "Transform your idea into a live MVP in minutes:\n"
+                "1. AI Architect Interview (15 minutes)\n"
+                "2. Business Blueprint Generation (2 minutes)\n"
+                "3. Smart Code Generation (5 minutes)\n"
+                "4. Live Deployment (3 minutes)\n\n"
+                "[green]Total time: ~25 minutes from idea to live MVP[/green]",
+                title="MVP Factory",
+            )
+        )
+
         try:
             # Phase 1: Founder Interview
             console.print("\n[bold cyan]Phase 1: Founder Interview[/bold cyan]")
             interview_agent = FounderInterviewAgent(self.anthropic_client)
             blueprint = await interview_agent.conduct_interview()
-            
+
             # Save blueprint
-            blueprint_file = interview_agent.save_blueprint(blueprint, self.output_dir)
-            
+            interview_agent.save_blueprint(blueprint, self.output_dir)
+
             # Phase 2: Generate MVP Code
             console.print("\n[bold cyan]Phase 2: MVP Code Generation[/bold cyan]")
             code_generator = BusinessLogicGenerator(self.anthropic_client)
             artifacts = await code_generator.generate_mvp_code(blueprint)
-            
+
             # Phase 3: Create Project Structure
             console.print("\n[bold cyan]Phase 3: Project Creation[/bold cyan]")
             project_path = await self._create_project_structure(blueprint, artifacts)
-            
+
             # Phase 4: Generate Deployment
             console.print("\n[bold cyan]Phase 4: Deployment Setup[/bold cyan]")
+
             # Use retry helper for short-lived deployment setup steps
             async def _setup():
                 await self._setup_deployment(project_path, blueprint)
                 return True
-            await retry_async(_setup, max_attempts=3, base_delay_ms=50, max_delay_ms=500)
-            
+
+            await retry_async(
+                _setup, max_attempts=3, base_delay_ms=50, max_delay_ms=500
+            )
+
             # Success!
-            console.print(f"\n[bold green]🎉 SUCCESS![/bold green]")
+            console.print("\n[bold green]🎉 SUCCESS![/bold green]")
             console.print(f"Your MVP is ready: {project_path}")
             console.print("\n[bold]Next Steps:[/bold]")
             console.print(f"1. cd {project_path}")
             console.print("2. docker-compose up -d")
             console.print("3. Visit http://localhost:8000")
             console.print("4. Start validating your idea!")
-            
+
             return str(project_path)
-            
+
         except Exception as e:
             console.print(f"[red]Error in workflow: {e}[/red]")
             raise
-    
-    async def _create_project_structure(self, blueprint: BusinessBlueprint, artifacts: list) -> Path:
+
+    async def _create_project_structure(
+        self, blueprint: BusinessBlueprint, artifacts: list
+    ) -> Path:
         """Create complete project structure with generated code"""
-        
+
         project_path = self.output_dir / blueprint.project_id
         project_path.mkdir(exist_ok=True)
         conflicts: list[tuple[str, str]] = []
-        
-        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
-            task = progress.add_task("Creating project structure...", total=len(artifacts) + 3)
-            
+
+        with Progress(
+            SpinnerColumn(), TextColumn("[progress.description]{task.description}")
+        ) as progress:
+            task = progress.add_task(
+                "Creating project structure...", total=len(artifacts) + 3
+            )
+
             # Create directory structure
-            (project_path / "backend" / "app" / "models").mkdir(parents=True, exist_ok=True)
-            (project_path / "backend" / "app" / "api").mkdir(parents=True, exist_ok=True)
-            (project_path / "backend" / "app" / "services").mkdir(parents=True, exist_ok=True)
-            (project_path / "backend" / "app" / "core").mkdir(parents=True, exist_ok=True)
+            (project_path / "backend" / "app" / "models").mkdir(
+                parents=True, exist_ok=True
+            )
+            (project_path / "backend" / "app" / "api").mkdir(
+                parents=True, exist_ok=True
+            )
+            (project_path / "backend" / "app" / "services").mkdir(
+                parents=True, exist_ok=True
+            )
+            (project_path / "backend" / "app" / "core").mkdir(
+                parents=True, exist_ok=True
+            )
             (project_path / "backend" / "app" / "db").mkdir(parents=True, exist_ok=True)
-            (project_path / "backend" / "app" / "worker").mkdir(parents=True, exist_ok=True)
-            (project_path / "frontend" / "src" / "components").mkdir(parents=True, exist_ok=True)
+            (project_path / "backend" / "app" / "worker").mkdir(
+                parents=True, exist_ok=True
+            )
+            (project_path / "frontend" / "src" / "components").mkdir(
+                parents=True, exist_ok=True
+            )
             (project_path / "docs").mkdir(exist_ok=True)
             progress.advance(task)
-            
+
             plan = []
             # Write all generated code files (safe-write)
             for artifact in artifacts:
@@ -142,30 +168,41 @@ class StreamlinedOrchestrator:
                     # Safe-write to .new and record conflict
                     target_path = file_path.with_suffix(file_path.suffix + ".new")
                     conflicts.append((str(file_path), str(target_path)))
-                    plan.append({"path": str(file_path), "action": "conflict", "write": str(target_path)})
+                    plan.append(
+                        {
+                            "path": str(file_path),
+                            "action": "conflict",
+                            "write": str(target_path),
+                        }
+                    )
                 else:
                     plan.append({"path": str(file_path), "action": "create"})
-                with open(target_path, 'w') as f:
+                with open(target_path, "w") as f:
                     f.write(artifact.content)
-                
+
                 progress.update(task, description=f"Writing {artifact.file_path}...")
                 progress.advance(task)
-            
+
             # Generate essential config files
             await self._generate_essential_configs(project_path, blueprint)
             progress.advance(task)
 
             # Write CI smoke workflow and scripts if present in artifacts
-            smoke = [a for a in artifacts if a.file_path.startswith('.github/') or a.file_path.startswith('scripts/')]
+            smoke = [
+                a
+                for a in artifacts
+                if a.file_path.startswith(".github/")
+                or a.file_path.startswith("scripts/")
+            ]
             for artifact in smoke:
                 p = project_path / artifact.file_path
                 p.parent.mkdir(parents=True, exist_ok=True)
-                with open(p, 'w') as f:
+                with open(p, "w") as f:
                     f.write(artifact.content)
-                if p.name.endswith('.sh'):
+                if p.name.endswith(".sh"):
                     p.chmod(0o755)
             progress.advance(task)
-        
+
         console.print(f"[green]✅ Project created at: {project_path}[/green]")
         if conflicts:
             console.print("[yellow]⚠️  Safe-write conflicts detected:[/yellow]")
@@ -173,20 +210,28 @@ class StreamlinedOrchestrator:
                 console.print(f" - {orig} -> {new}")
             # Write conflicts summary
             import json as _json
+
             with open(project_path / "conflicts.json", "w") as _f:
-                _json.dump({"conflicts": [{"original": o, "new": n} for o, n in conflicts]}, _f, indent=2)
+                _json.dump(
+                    {"conflicts": [{"original": o, "new": n} for o, n in conflicts]},
+                    _f,
+                    indent=2,
+                )
         # Always write plan
         try:
             import json as _json
+
             with open(project_path / "plan.json", "w") as _f:
                 _json.dump({"artifacts": plan}, _f, indent=2)
         except Exception:
             pass
         return project_path
-    
-    async def _generate_essential_configs(self, project_path: Path, blueprint: BusinessBlueprint):
+
+    async def _generate_essential_configs(
+        self, project_path: Path, blueprint: BusinessBlueprint
+    ):
         """Generate essential configuration files"""
-        
+
         # requirements.txt
         requirements_content = """fastapi==0.104.1
 uvicorn==0.24.0
@@ -203,10 +248,10 @@ rq==1.15.1
 boto3==1.34.19
 email-validator==2.1.1
 """
-        
+
         with open(project_path / "backend" / "requirements.txt", "w") as f:
             f.write(requirements_content)
-        
+
         # package.json
         package_json_content = f"""{{
   "name": "{blueprint.project_id}",
@@ -228,10 +273,10 @@ email-validator==2.1.1
     "@types/node": "^20.0.0"
   }}
 }}"""
-        
+
         with open(project_path / "frontend" / "package.json", "w") as f:
             f.write(package_json_content)
-        
+
         # .env template
         env_template = f"""# {blueprint.solution_concept.core_value_proposition}
 # Environment Configuration
@@ -260,13 +305,13 @@ SMTP_PORT=1025
 SMTP_USERNAME=
 SMTP_PASSWORD=
 """
-        
+
         with open(project_path / ".env.template", "w") as f:
             f.write(env_template)
-    
+
     async def _setup_deployment(self, project_path: Path, blueprint: BusinessBlueprint):
         """Setup deployment configuration"""
-        
+
         # Simple deployment script
         deploy_script = f"""#!/bin/bash
 # Quick deployment script for {blueprint.solution_concept.core_value_proposition}
@@ -330,27 +375,27 @@ echo "🌍 App:  http://localhost:8000"
 echo "📚 Docs: http://localhost:8000/docs"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 """
-        
+
         deploy_file = project_path / "deploy.sh"
         with open(deploy_file, "w") as f:
             f.write(deploy_script)
         deploy_file.chmod(0o755)  # Make executable
-        
+
         console.print("[green]✅ Deployment configuration ready[/green]")
 
 
 async def main():
     """Main entry point for streamlined orchestrator"""
-    
+
     try:
         orchestrator = StreamlinedOrchestrator()
         project_path = await orchestrator.run_complete_workflow()
-        
-        console.print(f"\n[bold green]🎯 MVP Generation Complete![/bold green]")
+
+        console.print("\n[bold green]🎯 MVP Generation Complete![/bold green]")
         console.print(f"Project: {project_path}")
         console.print("\n[bold]Quick Start:[/bold]")
         console.print(f"cd {project_path} && ./deploy.sh")
-        
+
     except KeyboardInterrupt:
         console.print("\n[yellow]Workflow cancelled by user[/yellow]")
     except Exception as e:

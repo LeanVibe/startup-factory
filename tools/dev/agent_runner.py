@@ -12,10 +12,10 @@ CLI (lightweight):
 
 The unit tests use summarize_plan_for_dry_run(dict) to avoid IO.
 """
+
 from __future__ import annotations
 
 import argparse
-import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -24,8 +24,8 @@ try:
 except Exception:  # pragma: no cover
     yaml = None  # type: ignore
 
-STATE_ROOT = Path('.agent_state')
-LOG_ROOT = Path('.agent_state/logs')
+STATE_ROOT = Path(".agent_state")
+LOG_ROOT = Path(".agent_state/logs")
 
 
 def summarize_plan_for_dry_run(plan: Dict[str, Any]) -> List[str]:
@@ -34,20 +34,20 @@ def summarize_plan_for_dry_run(plan: Dict[str, Any]) -> List[str]:
     No filesystem or YAML access; pure function used by unit tests.
     """
     lines: List[str] = []
-    version = plan.get('version', 'unknown')
-    plan_name = plan.get('plan', 'unnamed_plan')
+    version = plan.get("version", "unknown")
+    plan_name = plan.get("plan", "unnamed_plan")
     lines.append(f"Plan: {plan_name} (version {version})")
     lines.append("")
 
-    tasks = plan.get('tasks', [])
+    tasks = plan.get("tasks", [])
     for idx, task in enumerate(tasks, start=1):
-        name = task.get('name', f'task_{idx}')
+        name = task.get("name", f"task_{idx}")
         lines.append(f"- {name}")
-        for key in ('tests', 'edits', 'verify', 'commit'):
+        for key in ("tests", "edits", "verify", "commit"):
             value = task.get(key)
             if value is None:
                 continue
-            if key == 'commit':
+            if key == "commit":
                 lines.append(f"  commit: {value}")
             else:
                 lines.append(f"  {key}:")
@@ -77,10 +77,15 @@ def _load_plan_from_yaml(path: Path) -> Dict[str, Any]:  # pragma: no cover (CLI
     with path.open() as f:
         data = yaml.safe_load(f)
     # Minimal schema validation
-    if not isinstance(data, dict) or 'version' not in data or 'plan' not in data or 'tasks' not in data:
-        raise SystemExit('Invalid plan schema: require version, plan, tasks')
-    if not isinstance(data['tasks'], list):
-        raise SystemExit('Invalid plan schema: tasks must be a list')
+    if (
+        not isinstance(data, dict)
+        or "version" not in data
+        or "plan" not in data
+        or "tasks" not in data
+    ):
+        raise SystemExit("Invalid plan schema: require version, plan, tasks")
+    if not isinstance(data["tasks"], list):
+        raise SystemExit("Invalid plan schema: tasks must be a list")
     return data
 
 
@@ -91,42 +96,72 @@ def _print(lines: List[str]) -> None:  # separated for testability
 
 def run_cli(argv: Optional[List[str]] = None) -> int:  # pragma: no cover
     parser = argparse.ArgumentParser(description="Agent Runner (dry-run by default)")
-    parser.add_argument('--plan', type=str, required=False, help='Path to YAML plan file')
-    parser.add_argument('--dry-run', action='store_true', help='Print steps, do not execute')
-    parser.add_argument('--execute', action='store_true', help='Execute steps and write state markers')
-    parser.add_argument('--only', type=str, help='Run single task by name')
-    parser.add_argument('--next', dest='next_task', action='store_true', help='Run the next not-done task')
-    parser.add_argument('--list', dest='list_tasks', action='store_true', help='List tasks and exit')
-    parser.add_argument('--resume', dest='next_task_alias', action='store_true', help='Alias for --next')
-    parser.add_argument('--instructions', type=str, help='Path to an instructions file to log alongside execution')
-    parser.add_argument('--subagent', type=str, choices=['tester','editor','verifier'], help='Delegate execution hint (logged only)')
+    parser.add_argument(
+        "--plan", type=str, required=False, help="Path to YAML plan file"
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print steps, do not execute"
+    )
+    parser.add_argument(
+        "--execute", action="store_true", help="Execute steps and write state markers"
+    )
+    parser.add_argument("--only", type=str, help="Run single task by name")
+    parser.add_argument(
+        "--next",
+        dest="next_task",
+        action="store_true",
+        help="Run the next not-done task",
+    )
+    parser.add_argument(
+        "--list", dest="list_tasks", action="store_true", help="List tasks and exit"
+    )
+    parser.add_argument(
+        "--resume", dest="next_task_alias", action="store_true", help="Alias for --next"
+    )
+    parser.add_argument(
+        "--instructions",
+        type=str,
+        help="Path to an instructions file to log alongside execution",
+    )
+    parser.add_argument(
+        "--subagent",
+        type=str,
+        choices=["tester", "editor", "verifier"],
+        help="Delegate execution hint (logged only)",
+    )
+    parser.add_argument(
+        "--max-parallel",
+        dest="max_parallel",
+        type=int,
+        help="Execution hint for parallel capacity (logged only)",
+    )
     args = parser.parse_args(argv)
 
     plan: Dict[str, Any]
     if args.plan:
         plan = _load_plan_from_yaml(Path(args.plan))
     else:
-        raise SystemExit('--plan is required for CLI usage')
+        raise SystemExit("--plan is required for CLI usage")
 
-    plan_name = plan.get('plan', 'unnamed_plan')
-    tasks: List[Dict[str, Any]] = plan.get('tasks', [])
+    plan_name = plan.get("plan", "unnamed_plan")
+    tasks: List[Dict[str, Any]] = plan.get("tasks", [])
 
     # Filter tasks if needed
     if args.only:
-        tasks = [t for t in tasks if t.get('name') == args.only]
+        tasks = [t for t in tasks if t.get("name") == args.only]
         if not tasks:
             print(f"No task named {args.only} in plan {plan_name}")
             return 1
 
     if args.list_tasks:
         for t in tasks:
-            print(t.get('name', 'unnamed_task'))
+            print(t.get("name", "unnamed_task"))
         return 0
 
     if args.next_task or args.next_task_alias:
-        tasks = [t for t in tasks if not _is_task_done(plan_name, t.get('name', ''))]
+        tasks = [t for t in tasks if not _is_task_done(plan_name, t.get("name", ""))]
         if not tasks:
-            print('All tasks already completed.')
+            print("All tasks already completed.")
             return 0
         tasks = [tasks[0]]
 
@@ -136,11 +171,11 @@ def run_cli(argv: Optional[List[str]] = None) -> int:  # pragma: no cover
 
     # Execute mode (lightweight): we only create markers; actual commands are printed
     for task in tasks:
-        name = task.get('name', 'unnamed_task')
+        name = task.get("name", "unnamed_task")
         print(f"Executing task: {name}")
         # per-task log
         LOG_ROOT.mkdir(parents=True, exist_ok=True)
-        logf = (LOG_ROOT / f"{plan_name}__{name}.log").open('a')
+        logf = (LOG_ROOT / f"{plan_name}__{name}.log").open("a")
         # log instructions/subagent hints once at top
         if args.instructions:
             try:
@@ -150,8 +185,10 @@ def run_cli(argv: Optional[List[str]] = None) -> int:  # pragma: no cover
                 logf.write("instructions: <unreadable>\n")
         if args.subagent:
             logf.write(f"subagent: {args.subagent}\n")
+        if args.max_parallel:
+            logf.write(f"max_parallel: {args.max_parallel}\n")
 
-        for phase in ('tests', 'edits', 'verify'):
+        for phase in ("tests", "edits", "verify"):
             cmds = task.get(phase, [])
             if cmds:
                 print(f"# {phase}")
@@ -161,7 +198,7 @@ def run_cli(argv: Optional[List[str]] = None) -> int:  # pragma: no cover
                         logf.write(f"{phase}: {cmd}\n")
                     except Exception:
                         pass
-        if task.get('commit'):
+        if task.get("commit"):
             print(f"# commit\n{task['commit']}")
             try:
                 logf.write(f"commit: {task['commit']}\n")
@@ -177,5 +214,5 @@ def run_cli(argv: Optional[List[str]] = None) -> int:  # pragma: no cover
     return 0
 
 
-if __name__ == '__main__':  # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(run_cli())
