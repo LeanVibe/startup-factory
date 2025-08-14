@@ -57,6 +57,23 @@ def summarize_plan_for_dry_run(plan: Dict[str, Any]) -> List[str]:
     return lines
 
 
+def format_summary(plan: Dict[str, Any]) -> List[str]:
+    """Produce a compact summary table with pending/done and next task."""
+    plan_name = plan.get("plan", "unnamed_plan")
+    tasks = plan.get("tasks", [])
+    rows: List[str] = ["SUMMARY"]
+    next_task = None
+    for t in tasks:
+        name = t.get("name", "")
+        done = _is_task_done(plan_name, name)
+        status = "done" if done else "pending"
+        rows.append(f"[{status}] {name}")
+        if not done and next_task is None:
+            next_task = name
+    if next_task:
+        rows.append(f"next: {next_task}")
+    return rows
+
 def _marker_path(plan_name: str, task_name: str) -> Path:
     return STATE_ROOT / plan_name / f"{task_name}.done"
 
@@ -135,6 +152,9 @@ def run_cli(argv: Optional[List[str]] = None) -> int:  # pragma: no cover
         type=int,
         help="Execution hint for parallel capacity (logged only)",
     )
+    parser.add_argument(
+        "--simulate-failure", action="store_true", help="Simulate task failure (testing only)"
+    )
     args = parser.parse_args(argv)
 
     plan: Dict[str, Any]
@@ -166,7 +186,7 @@ def run_cli(argv: Optional[List[str]] = None) -> int:  # pragma: no cover
         tasks = [tasks[0]]
 
     if args.dry_run or not args.execute:
-        _print(summarize_plan_for_dry_run(plan))
+        _print(summarize_plan_for_dry_run(plan) + [""] + format_summary(plan))
         return 0
 
     # Execute mode (lightweight): we only create markers; actual commands are printed
@@ -204,8 +224,14 @@ def run_cli(argv: Optional[List[str]] = None) -> int:  # pragma: no cover
                 logf.write(f"commit: {task['commit']}\n")
             except Exception:
                 pass
-        _mark_task_done(plan_name, name)
-        print(f"Marked done: {name}")
+        if args.simulate_failure:
+            err_marker = STATE_ROOT / plan_name / f"{name}.err"
+            err_marker.parent.mkdir(parents=True, exist_ok=True)
+            err_marker.write_text("error\n")
+            print(f"Marked error: {name}")
+        else:
+            _mark_task_done(plan_name, name)
+            print(f"Marked done: {name}")
         try:
             logf.close()
         except Exception:
