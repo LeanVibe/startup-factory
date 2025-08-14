@@ -105,3 +105,94 @@ This plan captures the immediate next four epics, their deliverables, tests (TDD
 - `aiohttp` included in requirements for provider tests.
 - No external services started in CI; tests assert emitted code strings only.
 
+
+---
+
+# Next Four Epics (Phase N+1): Subagent Orchestration, E2E Demo Data, Deployment DX v2, API Surface Hardening
+
+These epics focus on increasing uninterrupted throughput (plan → delegate → execute), developer speed in generated apps, and baseline API quality without adding heavy dependencies.
+
+## Epic A — Subagent orchestration and longer uninterrupted runs (cursor/CLI friendly)
+
+### Goals
+- Emulate Claude “plan → delegate to subagents” workflow inside Cursor/CLI without long blocking loops.
+- Provide deterministic, resumable steps that batch operations to reduce context rot.
+
+### Deliverables
+- `docs/ORCHESTRATION.md`: How to work in “Plan/Think/Do” cycles using short-lived tasks.
+- `tools/dev/agent_runner.py`: Lightweight runner that:
+  - Loads a YAML plan (tasks with “tests → edits → verify → commit”).
+  - Executes steps idempotently (skips completed markers under `.agent_state/`).
+  - Provides a single “next” command to continue after interruptions.
+- `plans/` examples: `phase_next.yaml` covering 2–3 tasks as a model (tests-first → minimal edits → commit → push).
+
+### Tests (TDD)
+- Unit: parse a tiny YAML plan, produce an execution summary (no external IO). String assertions only.
+
+### Acceptance
+- Running `python tools/dev/agent_runner.py --plan plans/phase_next.yaml --dry-run` prints ordered steps.
+- Adding `--execute` creates `.agent_state/` markers and logs next actions.
+
+---
+
+## Epic B — E2E demo data & seed flows (Developer ergonomics v2)
+
+### Goals
+- Make generated apps usable in one minute with demo data ready.
+
+### Deliverables
+- Extend `tools/manage.py` with:
+  - `seed_basic_data()`: creates minimal org/user/items (template-only, no external DB in CI).
+  - `print_routes()` stub: lists key routes for quick navigation.
+- Update README “Getting Started” with a 3-step demo path (env → docker-compose → seed).
+
+### Tests (TDD)
+- Unit: emitted `tools/manage.py` contains new functions’ signatures and demo text; README contains “seed” instructions.
+
+### Acceptance
+- New projects present a clear, working happy-path: start → seed → explore.
+
+---
+
+## Epic C — Deployment DX v2 (one-liner + status)
+
+### Goals
+- Simplify local deployment & status checks for generated apps.
+
+### Deliverables
+- Emit `scripts/dev.sh` with `up`, `down`, and `status` subcommands (no external network calls in CI).
+- Extend `scripts/smoke.sh` to print detected public URL from `project.json` (if present).
+- Day One: add a `--status-only` code path to skip generation/deploy and just print last known info (commented in docs).
+
+### Tests (TDD)
+- Unit: emitted shell scripts contain the expected subcommand strings; Day One includes “status-only” string in help text.
+
+### Acceptance
+- Developers can run a single script to see up/down/status locally; CI remains unaffected.
+
+---
+
+## Epic D — API surface hardening (pagination + validation docstrings)
+
+### Goals
+- Improve baseline API ergonomics with minimal surface changes.
+
+### Deliverables
+- Entity list endpoints: ensure `skip`/`limit` are present and documented (already present) and add a simple `max_limit` clamp (e.g., 500).
+- Add basic docstrings/comments on validation expectations in auth CRUD handlers.
+- README: add a short “API conventions” section (pagination, errors, auth).
+
+### Tests (TDD)
+- Unit: emitted entity routers contain max limit clamp string; README contains “API conventions”.
+
+### Acceptance
+- Generated APIs present predictable, documented pagination and clear validation notes.
+
+---
+
+## Notes on uninterrupted work (Cursor/CLI)
+- Use short-lived batched steps: batch read/search/build/test actions rather than long sessions.
+- Keep a lightweight execution plan in YAML and mark steps in `.agent_state/` to resume after context loss.
+- Decompose epics → tasks with explicit tests, minimal edits, and verification — then commit & push.
+- Prefer deterministic string assertions in unit tests for generator outputs; avoid network and external services.
+

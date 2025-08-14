@@ -29,6 +29,24 @@ Recent changes you should know
 - Observability v2: metrics wiring and rotation hook tests
 - Deployment slice: Day One writes `production_projects/<id>/project.json`; deployer selection validated; Docker fallback for tests
 
+What to do next (high-priority epics)
+1) Subagent orchestration (cursor/CLI friendly)
+   - Add `docs/ORCHESTRATION.md`, `tools/dev/agent_runner.py`, and a sample `plans/phase_next.yaml` that encodes short-lived steps (tests → edits → verify → commit). The runner should support `--dry-run` and `--execute`, create `.agent_state/` markers, and print next actions.
+   - TDD: a small unit that parses a toy plan and returns a summary (no IO).
+
+2) E2E demo data & seed flows (DX v2)
+   - Extend `tools/manage.py` with `seed_basic_data()` and `print_routes()` (stubs; no external IO).
+   - Update README with a 3-step demo: env → docker-compose → seed.
+   - TDD: assert these function signatures/comments are present; README contains “seed” text.
+
+3) Deployment DX v2 (one-liner + status)
+   - Emit `scripts/dev.sh` with `up`, `down`, `status` subcommands; extend `scripts/smoke.sh` to echo public URL from `project.json` when present; document a `--status-only` code path in Day One (comment only).
+   - TDD: assert emitted scripts contain subcommand strings; Day One contains “status-only” mention.
+
+4) API surface hardening
+   - Clamp list `limit` (e.g., <= 500) and add handler docstrings for validation expectations; add an “API conventions” README section.
+   - TDD: assert clamp string present and README mentions API conventions.
+
 Your next four epics (from docs/PLAN.md)
 1) Auth/session & security v2 (JWT/OpenAPI/cookie‑CSRF)
    - Add OAuth2 password flow placeholder and global security requirement to `backend/app/main.py` (commented/conditional).
@@ -67,11 +85,9 @@ Validation commands
 Kickoff checklist for you
 - Read `docs/PLAN.md` (updated) and this prompt.
 - Run unit tests. Ensure 100% pass.
-- Start Epic 2 (Auth/security v2):
-  - Add failing unit tests under `tests/unit/` for OpenAPI oauth2+global security and cookie mode notes.
-  - Implement minimal generator edits to satisfy tests.
-  - Keep changes comment/conditional where appropriate to avoid runtime breakage.
-- Proceed to Epic 3 and 4 similarly, one vertical slice at a time.
+- Start with Subagent Orchestration (Epic A):
+  - Add a minimal failing test for plan parsing; implement `agent_runner.py` to pass.
+  - Keep operations dry-run only for tests; no external IO. Then proceed to DX v2, Deployment DX v2, and API hardening in vertical slices.
 
 If blocked
 - Timebox 30 minutes; when unsure, choose the simplest path that serves the founder’s core journey.
