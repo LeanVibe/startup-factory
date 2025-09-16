@@ -16,15 +16,19 @@ from dataclasses import dataclass
 from enum import Enum
 
 try:
-    from rich.console import Console
-    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
-    from rich.panel import Panel
-    import docker
-    import yaml
-except ImportError as e:
-    print(f"Missing dependency: {e}")
-    print("Install with: pip install rich docker pyyaml")
-    exit(1)
+    from ._compat import Console, Progress, SpinnerColumn, TextColumn, BarColumn
+except ImportError:  # pragma: no cover
+    from _compat import Console, Progress, SpinnerColumn, TextColumn, BarColumn
+
+try:
+    import docker  # type: ignore
+except Exception:  # pragma: no cover - environment without docker
+    docker = None  # type: ignore
+
+try:
+    import yaml  # type: ignore
+except Exception:  # pragma: no cover - fallback to json dump
+    yaml = None  # type: ignore
 
 # Import from other core services
 try:
@@ -97,12 +101,16 @@ class DeploymentService:
         self.active_deployments: Dict[str, Dict[str, Any]] = {}
         
         # Initialize Docker client if available
-        try:
-            self.docker_client = docker.from_env()
-            self.docker_available = True
-        except Exception as e:
-            logger.warning(f"Docker not available: {e}")
-            self.docker_available = False
+        self.docker_available = False
+        if docker:
+            try:
+                self.docker_client = docker.from_env()
+                self.docker_available = True
+            except Exception as e:  # pragma: no cover - depends on host setup
+                logger.warning(f"Docker not available: {e}")
+                self.docker_available = False
+        else:
+            self.docker_client = None
     
     async def deploy_complete_mvp(
         self,
@@ -199,8 +207,12 @@ class DeploymentService:
         
         # Generate docker-compose.yml for the specific business
         docker_compose = self._generate_docker_compose(blueprint, config)
-        with open(deploy_dir / "docker-compose.yml", "w") as f:
-            yaml.dump(docker_compose, f)
+        compose_path = deploy_dir / "docker-compose.yml"
+        with open(compose_path, "w") as f:
+            if yaml:
+                yaml.dump(docker_compose, f)  # type: ignore[arg-type]
+            else:
+                json.dump(docker_compose, f, indent=2)
         
         # Generate environment files
         env_vars = self._generate_environment_variables(blueprint, config)
@@ -298,6 +310,12 @@ class DeploymentService:
         deploy_dir = Path(deployment_data["deploy_directory"])
         config = deployment_data["config"]
         
+        if config.provider == CloudProvider.DOCKER_LOCAL and not self.docker_available:
+            return {
+                "services_deployed": False,
+                "error": "Docker not available"
+            }
+
         if config.provider == CloudProvider.DOCKER_LOCAL:
             # Use docker-compose for local deployment
             try:

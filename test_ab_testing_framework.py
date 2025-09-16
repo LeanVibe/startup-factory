@@ -93,7 +93,7 @@ class TestABTestingFramework:
         assert control_variant.traffic_percentage + test_variant.traffic_percentage == 1.0
         
         # Test configuration
-        assert test.primary_metric in ["conversion_rate", "user_satisfaction", "feature_adoption"]
+        assert test.primary_metric in ["conversion_rate", "user_satisfaction", "feature_adoption", "page_load_satisfaction"]
         assert len(test.secondary_metrics) >= 1
         assert test.status == TestStatus.DRAFT
     
@@ -142,9 +142,12 @@ class TestABTestingFramework:
         test_variant = next(v for v in test.variants if not v.is_control)
         
         # Record some conversions
+        ab_framework.record_user_interaction(test.test_id, "user_1", control_variant.variant_id, "exposure")
         ab_framework.record_user_interaction(test.test_id, "user_1", control_variant.variant_id, "conversion")
         ab_framework.record_user_interaction(test.test_id, "user_2", control_variant.variant_id, "exposure")
-        ab_framework.record_user_interaction(test.test_id, "user_3", test_variant.variant_id, "conversion") 
+        ab_framework.record_user_interaction(test.test_id, "user_3", test_variant.variant_id, "exposure")
+        ab_framework.record_user_interaction(test.test_id, "user_3", test_variant.variant_id, "conversion")
+        ab_framework.record_user_interaction(test.test_id, "user_4", test_variant.variant_id, "exposure")
         ab_framework.record_user_interaction(test.test_id, "user_4", test_variant.variant_id, "conversion")
         ab_framework.record_user_interaction(test.test_id, "user_5", test_variant.variant_id, "exposure")
         

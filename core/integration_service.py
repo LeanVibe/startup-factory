@@ -15,17 +15,17 @@ from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
 from enum import Enum
 
-try:
-    from rich.console import Console
-    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
-    from rich.panel import Panel
-    from rich.prompt import Prompt, Confirm
-    from rich.table import Table
-    from rich.live import Live
-except ImportError as e:
-    print(f"Missing dependency: {e}")
-    print("Install with: pip install rich")
-    exit(1)
+from ._compat import (
+    Console,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    BarColumn,
+    Panel,
+    Prompt,
+    Confirm,
+    Table,
+)
 
 # Import all core services (handle both package and standalone contexts)
 try:
@@ -50,9 +50,9 @@ except ImportError:
         from ai_orchestration_service import AIOrchestrationService, AITask, TaskType, TaskPriority
         from observability_service import ObservabilityService, MetricType
     except ImportError as e:
-        print(f"Missing core service dependency: {e}")
-        print("Ensure all core services are properly implemented")
-        exit(1)
+        raise ImportError(
+            f"Missing core service dependency: {e}. Ensure all core services are available."
+        )
 
 console = Console()
 logger = logging.getLogger(__name__)

@@ -14,14 +14,15 @@ from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
 from enum import Enum
 
+try:  # Support direct module import as well as package import
+    from ._compat import Console, Progress, SpinnerColumn, TextColumn, BarColumn
+except ImportError:  # pragma: no cover
+    from _compat import Console, Progress, SpinnerColumn, TextColumn, BarColumn
+
 try:
-    import anthropic
-    from rich.console import Console
-    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
-except ImportError as e:
-    print(f"Missing dependency: {e}")
-    print("Install with: pip install anthropic rich")
-    exit(1)
+    import anthropic  # type: ignore
+except Exception:  # pragma: no cover - exercised when anthropic missing
+    anthropic = None  # type: ignore
 
 # Import from conversation service
 try:
@@ -54,7 +55,12 @@ class CodeGenerationService:
     """
     
     def __init__(self, api_key: Optional[str] = None):
-        self.client = anthropic.Anthropic(api_key=api_key)
+        self.client = None
+        if anthropic and api_key:
+            try:
+                self.client = anthropic.Anthropic(api_key=api_key)
+            except Exception as exc:  # pragma: no cover
+                logger.warning(f"Anthropic client unavailable: {exc}")
         self.generated_artifacts: List[CodeArtifact] = []
         
         # Industry-specific code generation templates
@@ -421,6 +427,9 @@ class CodeGenerationService:
     
     async def _ai_code_generation(self, prompt: str, language: str) -> str:
         """Generate code using AI"""
+        if not self.client:
+            return "# AI generation not available in this environment\n"
+
         try:
             enhanced_prompt = f"""
             {prompt}
@@ -444,7 +453,7 @@ class CodeGenerationService:
             )
             
             return response.content[0].text
-            
+
         except Exception as e:
             logger.error(f"Code generation error: {e}")
             return f"# Error generating code: {e}\n# Please implement manually"

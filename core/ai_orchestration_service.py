@@ -14,17 +14,17 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass, field
 from enum import Enum
-import aiohttp
+try:
+    import anthropic  # type: ignore
+except Exception:  # pragma: no cover
+    anthropic = None  # type: ignore
 
 try:
-    import anthropic
-    import openai
-    from rich.console import Console
-    from rich.progress import Progress, SpinnerColumn, TextColumn
-except ImportError as e:
-    print(f"Missing dependency: {e}")
-    print("Install with: pip install anthropic openai rich aiohttp")
-    exit(1)
+    import openai  # type: ignore
+except Exception:  # pragma: no cover
+    openai = None  # type: ignore
+
+from ._compat import Console, Progress, SpinnerColumn, TextColumn
 
 console = Console()
 logger = logging.getLogger(__name__)
@@ -159,7 +159,7 @@ class AIOrchestrationService:
         """Initialize AI provider clients"""
         
         # Initialize Anthropic
-        if self.api_keys.get("anthropic"):
+        if anthropic and self.api_keys.get("anthropic"):
             try:
                 self.providers[AIProvider.ANTHROPIC] = anthropic.Anthropic(
                     api_key=self.api_keys["anthropic"]
@@ -170,7 +170,7 @@ class AIOrchestrationService:
                 logger.error(f"❌ Failed to initialize Anthropic: {e}")
         
         # Initialize OpenAI
-        if self.api_keys.get("openai"):
+        if openai and self.api_keys.get("openai"):
             try:
                 self.providers[AIProvider.OPENAI] = openai.AsyncOpenAI(
                     api_key=self.api_keys["openai"]
@@ -181,7 +181,7 @@ class AIOrchestrationService:
                 logger.error(f"❌ Failed to initialize OpenAI: {e}")
         
         # Initialize Perplexity
-        if self.api_keys.get("perplexity"):
+        if openai and self.api_keys.get("perplexity"):
             try:
                 self.providers[AIProvider.PERPLEXITY] = openai.AsyncOpenAI(
                     api_key=self.api_keys["perplexity"],

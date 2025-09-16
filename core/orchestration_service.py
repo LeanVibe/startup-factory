@@ -16,14 +16,25 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 try:
-    from rich.console import Console
-    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
-    from rich.panel import Panel
-    from rich.live import Live
-except ImportError as e:
-    print(f"Missing dependency: {e}")
-    print("Install with: pip install rich")
-    exit(1)
+    from ._compat import (
+        Console,
+        Progress,
+        SpinnerColumn,
+        TextColumn,
+        BarColumn,
+        Panel,
+        Live,
+    )
+except ImportError:  # pragma: no cover - standalone usage
+    from _compat import (
+        Console,
+        Progress,
+        SpinnerColumn,
+        TextColumn,
+        BarColumn,
+        Panel,
+        Live,
+    )
 
 # Import core services
 try:

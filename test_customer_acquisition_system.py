@@ -21,45 +21,8 @@ import pytest
 from typing import Dict, List, Any
 from dataclasses import dataclass
 
-@dataclass
-class BusinessContext:
-    """Business context for customer acquisition"""
-    industry: str
-    business_model: str  # b2b_saas, b2c_saas, marketplace, etc.
-    target_audience: str
-    value_proposition: str
-    price_point: str = None
-    
-class CustomerAcquisitionSystem:
-    """
-    Generate industry-specific customer discovery strategies for founders.
-    
-    MUST provide:
-    1. Specific outreach channels for the industry
-    2. Actionable templates (emails, messages, scripts)
-    3. Timeline and expectations
-    4. Success metrics to track
-    """
-    
-    def __init__(self):
-        pass
-    
-    def generate_customer_discovery_strategy(self, business_context: BusinessContext) -> Dict[str, Any]:
-        """
-        Generate customer discovery strategy based on business context.
-        
-        THIS METHOD MUST BE IMPLEMENTED TO MAKE TESTS PASS.
-        """
-        # This will initially fail the test - that's the point of TDD
-        raise NotImplementedError("Customer discovery strategy not implemented yet")
-    
-    def generate_outreach_templates(self, business_context: BusinessContext) -> Dict[str, str]:
-        """Generate industry-specific outreach templates"""
-        raise NotImplementedError("Outreach templates not implemented yet")
-    
-    def get_validation_experiments(self, business_context: BusinessContext) -> List[Dict[str, Any]]:
-        """Get validation experiments for testing business hypotheses"""
-        raise NotImplementedError("Validation experiments not implemented yet")
+# Import the real implementation
+from customer_acquisition_system import CustomerAcquisitionSystem, BusinessContext
 
 class TestCustomerAcquisitionSystem:
     """TDD tests for customer acquisition system"""

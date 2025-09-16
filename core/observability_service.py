@@ -17,17 +17,12 @@ from dataclasses import dataclass, field, asdict
 from enum import Enum
 import threading
 
+from ._compat import Console, Table, Panel, Live
+
 try:
-    from rich.console import Console
-    from rich.table import Table
-    from rich.panel import Panel
-    from rich.live import Live
-    import psutil
-    import aiofiles
-except ImportError as e:
-    print(f"Missing dependency: {e}")
-    print("Install with: pip install rich psutil aiofiles")
-    exit(1)
+    import psutil  # type: ignore
+except Exception:  # pragma: no cover - psutil optional
+    psutil = None  # type: ignore
 
 console = Console()
 logger = logging.getLogger(__name__)
@@ -516,7 +511,12 @@ class ObservabilityService:
     # Health Check Functions
     async def _check_system_memory(self) -> Dict[str, Any]:
         """Check system memory usage"""
-        
+        if not psutil:
+            return {
+                "status": HealthStatus.HEALTHY,
+                "details": {"percent": 0.0, "available_gb": 0.0}
+            }
+
         memory = psutil.virtual_memory()
         
         if memory.percent > 90:
@@ -539,7 +539,12 @@ class ObservabilityService:
     
     async def _check_system_cpu(self) -> Dict[str, Any]:
         """Check system CPU usage"""
-        
+        if not psutil:
+            return {
+                "status": HealthStatus.HEALTHY,
+                "details": {"percent": 0.0}
+            }
+
         cpu_percent = psutil.cpu_percent(interval=1)
         
         if cpu_percent > 95:
@@ -562,7 +567,12 @@ class ObservabilityService:
     
     async def _check_system_disk(self) -> Dict[str, Any]:
         """Check system disk usage"""
-        
+        if not psutil:
+            return {
+                "status": HealthStatus.HEALTHY,
+                "details": {"percent": 0.0, "free_gb": 0.0}
+            }
+
         disk = psutil.disk_usage('/')
         disk_percent = (disk.used / disk.total) * 100
         

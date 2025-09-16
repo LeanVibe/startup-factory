@@ -17,14 +17,14 @@ from enum import Enum
 import threading
 
 try:
-    from rich.console import Console
-    from rich.table import Table
-    from rich.panel import Panel
-    import psutil
-except ImportError as e:
-    print(f"Missing dependency: {e}")
-    print("Install with: pip install rich psutil")
-    exit(1)
+    from ._compat import Console, Table, Panel
+except ImportError:  # pragma: no cover
+    from _compat import Console, Table, Panel
+
+try:
+    import psutil  # type: ignore
+except Exception:  # pragma: no cover - exercised when psutil missing
+    psutil = None  # type: ignore
 
 # Import from other core services
 try:
@@ -150,10 +150,15 @@ class MultiTenantService:
     
     def _initialize_resource_pool(self) -> Dict[str, Any]:
         """Initialize system resource pool"""
-        # Get system resources
-        memory_total = psutil.virtual_memory().total // (1024 * 1024)  # MB
-        cpu_count = psutil.cpu_count()
-        disk_total = psutil.disk_usage('/').total // (1024 * 1024 * 1024)  # GB
+        # Get system resources (fallback to conservative defaults if psutil unavailable)
+        if psutil:
+            memory_total = psutil.virtual_memory().total // (1024 * 1024)  # MB
+            cpu_count = psutil.cpu_count() or 1
+            disk_total = psutil.disk_usage('/').total // (1024 * 1024 * 1024)  # GB
+        else:
+            memory_total = 2048
+            cpu_count = 2
+            disk_total = 50
         
         # Reserve resources for system
         available_memory = int(memory_total * 0.7)  # Use 70% of system memory
@@ -330,9 +335,16 @@ class MultiTenantService:
         """Monitor system-wide resource usage"""
         
         # Get current system usage
-        memory_info = psutil.virtual_memory()
-        cpu_percent = psutil.cpu_percent(interval=1)
-        disk_usage = psutil.disk_usage('/')
+        if psutil:
+            memory_info = psutil.virtual_memory()
+            cpu_percent = psutil.cpu_percent(interval=1)
+            disk_usage = psutil.disk_usage('/')
+            memory_percent = memory_info.percent
+            disk_percent = (disk_usage.used / disk_usage.total) * 100 if disk_usage.total else 0.0
+        else:
+            memory_percent = 0.0
+            cpu_percent = 0.0
+            disk_percent = 0.0
         
         # Calculate tenant usage
         total_allocated_memory = self.resource_pool["allocated_memory_mb"]
@@ -341,9 +353,9 @@ class MultiTenantService:
         
         usage_data = {
             "system": {
-                "memory_percent": memory_info.percent,
+                "memory_percent": memory_percent,
                 "cpu_percent": cpu_percent,
-                "disk_percent": (disk_usage.used / disk_usage.total) * 100
+                "disk_percent": disk_percent,
             },
             "tenant_allocation": {
                 "allocated_memory_mb": total_allocated_memory,
