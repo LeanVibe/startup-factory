@@ -1,93 +1,255 @@
-You are a senior Cursor agent taking over the Startup Factory repo. Follow this exact working style.
+# STARTUP FACTORY - HANDOFF PROMPT FOR NEW CLAUDE AGENT
 
-Must-do workflow
-- Keep tests green at all times. Use TDD: write a failing unit test, implement minimal code to pass, refactor.
-- Commit in small, conventional commits; subject ≤ 72 chars. Push only when an epic/vertical slice is complete.
-- Prefer simple, vertical slices; avoid overbuilding (YAGNI). Serve the founder journey first.
-- Use provider manager (Anthropic default) when calling AI. Only run short-lived commands.
+## 🎯 Mission Critical Context
 
-Context (current state)
-- Orchestrators and generators in `tools/`
-  - `founder_interview_system.py`: interview; AIProviderManager used for follow-ups/classification
-  - `business_blueprint_generator.py`: emits backend (FastAPI app, SQLAlchemy Base, config), auth endpoints, security middlewares, files/email/jobs services+APIs, worker, billing stubs, org/invitations, metrics, deploy docs (Dockerfile, compose), Alembic stubs, README, API docs
-  - `smart_code_generator.py`: business logic/UI via provider manager
-  - `day_one_experience.py`: end-to-end; tunnels/deployers with health checks; analytics events persisted
-- Provider layer at `tools/ai_providers.py` (Anthropic default)
-- Regeneration supports safe-write, `plan.json`, `conflicts.json`
-- Deployers in `tools/deployers/` (base, fly, render). DEPLOY_TARGET switching.
-- Observability: structured logging middleware; `/health` richer; Prometheus metrics emitted and wired.
-- CI: unit workflow runs pytest; `aiohttp` in requirements.
-- Multi-tenant/billing phase 1+2: `Organization`, `tenant_id` on entities, `subscription_status` (+ stripe ids) on `User`, billing endpoints; plan→features mapping; trials recognized.
-- Unit tests: green including new tests for invitations, metrics wiring, flags/logging, billing v2, apply-plan CLI, day-one metadata, observability v2.
+You are taking over the **Startup Factory** - an AI-powered system that generates live MVPs in 25 minutes through conversational interface. This is NOT a traditional tech platform - it's a founder-focused AI system that eliminates technical complexity.
 
-Recent changes you should know
-- Feature flags: `backend/app/core/feature_flags.py` and usage in entity create
-- Logging: PII redaction for Authorization/cookies; HSTS + OpenAPI bearer placeholder in `main.py`
-- Org RBAC: invitations/admin routers included; tenancy dependency on update
-- Billing v2: PLAN_FEATURES mapping; `trialing` accepted; webhook events handled in stubs
-- Apply-plan CLI: `tools/apply_plan.py` with dry-run and safe apply; compatibility for two call styles
-- Observability v2: metrics wiring and rotation hook tests
-- Deployment slice: Day One writes `production_projects/<id>/project.json`; deployer selection validated; Docker fallback for tests
+### The Transformation Context
+- **BEFORE**: 95+ files, 1,296-line orchestrator, technical expertise required
+- **AFTER**: 6 core AI modules, single command, conversation-driven workflow
+- **SUCCESS METRIC**: 25 minutes from founder conversation to live MVP with public URL
 
-What to do next (high-priority epics)
-1) Subagent orchestration (cursor/CLI friendly)
-   - Add `docs/ORCHESTRATION.md`, `tools/dev/agent_runner.py`, and a sample `plans/phase_next.yaml` that encodes short-lived steps (tests → edits → verify → commit). The runner should support `--dry-run` and `--execute`, create `.agent_state/` markers, and print next actions.
-   - TDD: a small unit that parses a toy plan and returns a summary (no IO).
+## 📋 Current System Status
 
-2) E2E demo data & seed flows (DX v2)
-   - Extend `tools/manage.py` with `seed_basic_data()` and `print_routes()` (stubs; no external IO).
-   - Update README with a 3-step demo: env → docker-compose → seed.
-   - TDD: assert these function signatures/comments are present; README contains “seed” text.
+### ✅ COMPLETED COMPONENTS
+**Core AI System Architecture** (Ready for Integration):
 
-3) Deployment DX v2 (one-liner + status)
-   - Emit `scripts/dev.sh` with `up`, `down`, `status` subcommands; extend `scripts/smoke.sh` to echo public URL from `project.json` when present; document a `--status-only` code path in Day One (comment only).
-   - TDD: assert emitted scripts contain subcommand strings; Day One contains “status-only” mention.
+1. **`startup_factory.py`** - Unified entry point with interactive menu
+2. **`tools/founder_interview_system.py`** - AI Architect Agent (15-min business conversations)
+3. **`tools/business_blueprint_generator.py`** - Business logic from conversation analysis
+4. **`tools/smart_code_generator.py`** - Intelligent code generation engine
+5. **`tools/day_one_experience.py`** - Complete 25-minute pipeline orchestrator
+6. **Individual Systems** (Isolated, Need Integration):
+   - `customer_acquisition_system.py` - Industry-specific acquisition templates
+   - `customer_feedback_system.py` - Embeddable feedback widgets
+   - `customer_validation_dashboard.py` - 0-100 business intelligence scoring
+   - `mvp_evolution_system.py` - Data-driven improvement recommendations
+   - `ab_testing_framework.py` - Statistical A/B testing framework
 
-4) API surface hardening
-   - Clamp list `limit` (e.g., <= 500) and add handler docstrings for validation expectations; add an “API conventions” README section.
-   - TDD: assert clamp string present and README mentions API conventions.
+### 🚨 FUNDAMENTAL GAP IDENTIFIED
+**All individual validation systems exist but operate in isolation. No unified workflow connects components for 25-minute pipeline.**
 
-Your next four epics (from docs/PLAN.md)
-1) Auth/session & security v2 (JWT/OpenAPI/cookie‑CSRF)
-   - Add OAuth2 password flow placeholder and global security requirement to `backend/app/main.py` (commented/conditional).
-   - Ensure CSRF path is clear for cookie mode; add minimal password policy checks; consistent `HTTPBearer` imports.
-   - TDD: tests assert OpenAPI additions, cookie mode notes, and consistent imports.
-2) Compliance toggles (industry‑aware scaffolds)
-   - Add HIPAA/PCI/FERPA toggles in `core/config.py`; expand redaction headers when toggles set.
-   - Emit compliance comments in security middleware/services based on industry.
-   - TDD: tests assert flags/comments exist for healthcare/fintech/education.
-3) Generated app quality gates (smoke + security checks)
-   - Emit tests for security headers, `/metrics`, and redaction; add `tools/manage.py` helper (no external IO).
-   - TDD: tests assert artifacts emitted.
-4) Deployment polish (optional Railway, tunnels ergonomics)
-   - Add RailwayDeployer stub and wire selection; improve tunnel detection messages.
-   - TDD: deployer selection includes railway; metadata persists unchanged.
+## 🎯 YOUR MISSION: Execute 4 Epics (12 Weeks Total)
 
-Constraints
-- Only short-lived commands; no long-running servers in CI.
-- Don’t integrate real external services in CI (Stripe, S3, etc.). Stubs only.
-- Keep subject lines ≤ 72 chars.
+Read `docs/PLAN.md` for complete details. Here's your execution roadmap:
 
-Execution playbook
-- Discovery: Grep for target symbols; read only what you need; don’t over-scan.
-- TDD loop: Add failing test(s) → implement minimal code → run tests → refactor.
-- Commits: One focused change per commit; push after epic completion.
+### Epic 1: System Integration & Unified Workflow (3 weeks) - START HERE
+**Objective**: Create seamless end-to-end workflow integrating all validation systems
 
-Definition of done per epic
-- Unit tests cover generator emission/wiring for that epic.
-- All unit tests pass locally and in CI.
-- Code follows repo style; naming is clear and self-documenting.
+**Critical First Week Tasks**:
+1. **Integration Testing & Validation**
+   - Run comprehensive tests on all existing systems
+   - Identify data flow requirements between components
+   - Document current system interfaces and dependencies
 
-Validation commands
-- `python -m pytest tests/unit -q`
-- Inspect generated artifacts by scanning `BusinessLogicGenerator` outputs in tests.
+2. **Unified Data Models**
+   - Create shared `BusinessContext` class with validation pipeline state
+   - Design data flow: acquisition → feedback → evolution → testing
+   - Implement state persistence across all systems
 
-Kickoff checklist for you
-- Read `docs/PLAN.md` (updated) and this prompt.
-- Run unit tests. Ensure 100% pass.
-- Start with Subagent Orchestration (Epic A):
-  - Add a minimal failing test for plan parsing; implement `agent_runner.py` to pass.
-  - Keep operations dry-run only for tests; no external IO. Then proceed to DX v2, Deployment DX v2, and API hardening in vertical slices.
+3. **Workflow Orchestration Engine**
+   - Build `WorkflowOrchestrator` class managing complete pipeline
+   - Implement state machine for 25-minute journey phases
+   - Add progress tracking and milestone completion
 
-If blocked
-- Timebox 30 minutes; when unsure, choose the simplest path that serves the founder’s core journey.
+**Success Criteria**: Single command executes complete 25-minute pipeline with 95%+ success rate
+
+### Epic 2: Production Infrastructure & Deployment (3 weeks)
+**Objective**: Production-ready, scalable infrastructure
+
+**Key Components**:
+- Docker implementation with optimized layers
+- PostgreSQL for production data storage
+- API rate limiting and cost monitoring
+- CI/CD pipeline with automated testing
+- Security implementation and compliance
+
+### Epic 3: Web Interface & User Experience (3 weeks) 
+**Objective**: Non-technical founder interface
+
+**Key Components**:
+- React/Next.js frontend with responsive design
+- Real-time WebSocket integration for progress tracking
+- Interactive validation dashboards
+- Mobile-responsive design
+
+### Epic 4: Business Model & Scaling (3 weeks)
+**Objective**: Sustainable business model with multi-tenancy
+
+**Key Components**:
+- Tiered pricing model (€50-200/MVP)
+- Stripe payment processing
+- Multi-tenant architecture
+- Business intelligence dashboard
+
+## 🛠️ Development Methodology (NON-NEGOTIABLE)
+
+### Test-Driven Development Protocol
+```python
+# TDD Loop (MANDATORY):
+# 1. Write failing unit test
+# 2. Implement minimal code to pass
+# 3. Refactor while keeping tests green
+# 4. Commit with tests passing
+```
+
+### Engineering Principles
+- **Pareto Principle**: 20% work for 80% value
+- **YAGNI**: You Aren't Gonna Need It - build what's needed now
+- **Clean Architecture**: Dependency inversion, single responsibility
+- **First Principles**: Question everything, build from foundational truths
+- **Simple Solutions**: Prefer simple over clever implementations
+
+### Quality Gates (ABSOLUTE REQUIREMENTS)
+```bash
+# Before ANY task completion:
+python -m pytest tests/ -v                    # All tests MUST pass
+python -c "import startup_factory; print('✅ Main module loads')"
+python startup_factory.py --status           # System health check
+
+# Before ANY commit:
+python -m py_compile startup_factory.py      # Syntax validation
+python -m py_compile tools/*.py              # All modules compile
+```
+
+## 🎯 IMMEDIATE ACTIONS (Start Day 1)
+
+### 1. System Validation (15 minutes)
+```bash
+# Run these commands to validate current state:
+python startup_factory.py --status
+python -m pytest tests/ -v
+python -c "from tools import founder_interview_system, business_blueprint_generator; print('✅ Core modules ready')"
+```
+
+### 2. Begin Epic 1 - Week 1 Implementation (Start Immediately)
+
+**Task 1.1: Integration Testing & Validation**
+```python
+# Create comprehensive integration test:
+# tests/integration/test_complete_pipeline.py
+
+def test_complete_validation_pipeline():
+    \"\"\"Test end-to-end workflow from interview to A/B testing\"\"\"
+    # Initialize all systems
+    # Run complete pipeline
+    # Validate data flow and state persistence
+    # Assert 25-minute completion time
+    pass
+```
+
+**Task 1.2: Unified Data Models**
+```python
+# Create: tools/shared_models.py
+class BusinessContext:
+    \"\"\"Unified data model for complete validation pipeline\"\"\"
+    def __init__(self):
+        self.interview_data = {}
+        self.acquisition_results = {}
+        self.feedback_data = {}
+        self.validation_score = 0
+        self.evolution_recommendations = []
+        self.ab_test_results = {}
+        self.pipeline_state = "initialized"
+    
+    def advance_to_next_phase(self, phase: str):
+        \"\"\"Advance pipeline to next validation phase\"\"\"
+        pass
+```
+
+**Task 1.3: Workflow Orchestration Engine**
+```python
+# Create: tools/workflow_orchestrator.py
+class WorkflowOrchestrator:
+    \"\"\"Manages complete 25-minute validation pipeline\"\"\"
+    
+    async def execute_complete_pipeline(self, business_idea: str) -> BusinessContext:
+        \"\"\"Execute full validation workflow\"\"\"
+        # Phase 1: Founder Interview (15 min)
+        # Phase 2: Customer Acquisition (5 min)
+        # Phase 3: Feedback Collection (5 min)
+        # Phase 4: A/B Testing Setup (5 min)
+        pass
+```
+
+## 🤖 AI Integration Strategy
+
+### Single Provider Strategy
+- **Primary**: Anthropic Claude-3-Sonnet for all business intelligence
+- **Cost Optimization**: Single provider, optimized prompts, built-in rate limiting
+- **Quality Focus**: Consistent conversation experience, superior business understanding
+
+### Provider Manager Usage
+```python
+# Use existing AI provider manager:
+from tools.ai_providers import create_default_provider_manager
+
+provider_manager = create_default_provider_manager()
+response = await provider_manager.generate_completion(
+    provider="anthropic",
+    prompt="Business intelligence analysis request",
+    max_tokens=2000
+)
+```
+
+## 📊 Success Metrics & Validation
+
+### Epic 1 Success Criteria (Your Primary Focus)
+- [ ] Single command executes complete 25-minute pipeline
+- [ ] All validation systems work together seamlessly  
+- [ ] Data flows correctly from acquisition through A/B testing
+- [ ] Industry-specific optimizations work end-to-end
+- [ ] Performance meets 25-minute target with 95%+ success rate
+
+### Daily Progress Validation
+```bash
+# Run every day before committing:
+python startup_factory.py                    # Interactive demo
+python tools/day_one_experience.py          # Complete pipeline test
+python -m pytest tests/integration/ -v      # Integration tests
+```
+
+## 🚨 EXECUTION DISCIPLINE
+
+### Work Style
+- **Focus**: 4-hour maximum work chunks per task
+- **Commits**: Small, frequent commits with conventional format
+- **Testing**: TDD mandatory - no code without tests
+- **Progress**: Update implementation status every 2 hours
+
+### Escalation Protocol
+- **Low Confidence (<70%)**: Continue with extra validation
+- **Medium Confidence (70-85%)**: Proceed with documentation
+- **High Confidence (85%+)**: Execute autonomously
+- **Blocked**: Timebox 30 minutes, then ask for guidance
+
+### Communication Protocol
+```bash
+# Status updates (every 2 hours):
+git commit -m "feat(epic1): implement business context state machine
+
+- Add BusinessContext class with pipeline state tracking
+- Implement phase progression logic
+- Add validation for state transitions
+- Tests: 95% coverage on state management
+
+Epic 1 Progress: 15% complete (Week 1, Day 2)"
+```
+
+## 🎯 START COMMAND
+
+Begin immediately with Epic 1, Week 1, Task 1.1:
+
+```bash
+# Your first action:
+mkdir -p tests/integration
+touch tests/integration/test_complete_pipeline.py
+
+# Then create the failing integration test and begin TDD cycle
+```
+
+**Remember**: You're not building traditional software - you're integrating AI-powered business intelligence systems into a seamless founder experience. The technical complexity must disappear behind conversational simplicity.
+
+**Success = 25 minutes from founder conversation to live MVP with real business validation.**
+
+Ready to transform startup validation forever? Begin Epic 1 implementation now.
